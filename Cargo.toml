@@ -1,0 +1,10 @@
+[package]
+name = "yomumi-evidence"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+[dependencies]
+roxmltree = "0.21"
+serde_json = "1"
+sha2 = "0.10"
