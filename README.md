@@ -3,15 +3,42 @@
 </p>
 
 <h1 align="center">Yomumi Harness</h1>
-<p align="center"><strong>Know what actually changed in your Bun tests.</strong></p>
+<p align="center"><strong>Compare Bun test runs without mistaking missing tests for fixes.</strong></p>
+<p align="center">Local CLI · Rust · Bun JUnit · <a href="LICENSE">MIT</a></p>
 <p align="center">
+  <a href="#try-it">Try it</a> ·
   <a href="#results-at-a-glance">Results</a> ·
-  <a href="#quick-start">Quick start</a> ·
+  <a href="#install">Install</a> ·
   <a href="docs/guide/README.md">Field guide</a> ·
   <a href="AGENT-START.md">Agent entry point</a>
 </p>
 
-Bun tells you whether a command passed. Yomumi Harness helps you check **which files ran** and **whether a before/after pair ran the same observed tests**. It emits small JSON for reviewers and agents, without uploading the original report.
+Bun answers **“Did this command pass?”** Yomumi Harness adds **“Did we run the intended files, and are the before and after results comparable?”** It keeps the original JUnit report local and hands reviewers or agents a compact JSON result.
+
+## Try it
+
+With [Rust](https://www.rust-lang.org/tools/install), [Bun](https://bun.sh/docs/installation), and Python 3.10+ available:
+
+~~~sh
+git clone https://github.com/Lumichandesu/yomumi-harness.git
+cd yomumi-harness
+cargo build --release --locked
+python example_smoke.py
+~~~
+
+Selected fields from the [recorded output](docs/evidence/installed-cli-windows.json):
+
+~~~json
+{
+  "test_count": 2,
+  "fixes": 1,
+  "baseline": "scoped-fail",
+  "candidate": "scoped-pass",
+  "wrong_scope": "unverified"
+}
+~~~
+
+The first run fails on purpose. The second fixes it. Giving the same green report the wrong expected file returns `unverified`, not pass. For a more deceptive case, [replay a green run that skipped a test](docs/guide/01-first-run.md#case-2-a-green-run-that-ran-less).
 
 ## Results at a glance
 
@@ -56,18 +83,19 @@ The sample is a public fixture, not production evidence. Summary output can stil
 
 The point is to let an agent decide whether a run is trustworthy and where to look first **without reading every stack trace or passing row**. Keep the full report for targeted follow-up. This measures only the text passed as evidence with `o200k_base`, not total prompts, cost, or model quality. [See the measurements and reproduce them](docs/guide/05-token-budget.md).
 
-## Quick start
+## Install
 
-**1. Build and run the sample** from this checkout. The demo driver uses Python 3.10+ and Bun; the compiled Rust CLI needs neither to read existing reports.
+Use the release binary built by `cargo build --release --locked`: `target/release/yomumi-evidence` (`.exe` on Windows). Or install from a checked-out copy:
 
 ~~~sh
-cargo build --release --locked
-python example_smoke.py
+cargo install --path . --locked
 ~~~
 
-Expect two matched tests, one fix, and `unverified` for the wrong expected file. The binary is `target/release/yomumi-evidence` (add `.exe` on Windows).
+This is a source install, not a registry or package-manager release. Cargo may download the locked dependencies when building for the first time. The installed CLI runs offline and does not require Python or Bun to read an existing report. [Windows source-install smoke](docs/evidence/installed-cli-windows.json).
 
-**2. Check a real project run.** Run Bun from your project root and record its actual exit before another command overwrites it:
+## Use it in your project
+
+**Check a real project run.** Run Bun from your project root and record its actual exit before another command overwrites it:
 
 ~~~sh
 bun_rc=0
@@ -78,7 +106,7 @@ bun test ./tests/example.test.ts --reporter=junit --reporter-outfile=run.xml || 
 
 In PowerShell capture `$LASTEXITCODE` immediately after Bun. Repeat `--expect-file` for each intended file. `0` = scoped pass, `1` = scoped failure, `2` = unverified or invalid. Without scope arguments, the command only summarizes.
 
-**3. Compare two runs on the same selection.** These example codes are for a failing baseline and passing candidate. Use the codes you actually captured.
+**Compare two runs on the same selection.** These example codes are for a failing baseline and passing candidate. Use the codes you actually captured.
 
 ~~~sh
 target/release/yomumi-evidence compare before.xml after.xml --before-exit 1 --after-exit 0
@@ -97,6 +125,12 @@ target/release/yomumi-evidence compare before.xml after.xml --before-exit 1 --af
 | See exactly what each test layer proves | [Verification guide](docs/guide/07-verification.md) |
 | Fork for a monorepo, a review gate, or a different runner | [Fork and adapt](docs/guide/06-fork-and-adapt.md) |
 | Change the CLI or add a fixture | [Contributor checklist](CONTRIBUTING.md) |
+
+### When not to use it
+
+- Need line annotations in GitHub or a team dashboard? Use a CI reporter. This tool emits JSON; it does not publish checks.
+- Need full code coverage, arbitrary JUnit support, or an automatic ship decision? This tool only verifies evidence for the observed Bun run. [Fork guide](docs/guide/06-fork-and-adapt.md) explains how to add a runner without relaxing the checks.
+- Need the complete failure details? Keep the raw report and inspect the relevant part locally. The compact summary is a first pass, not a replacement for the original.
 
 ## Who benefits
 
@@ -120,6 +154,10 @@ target/release/yomumi-evidence compare before.xml after.xml --before-exit 1 --af
 | Local scope verification and a compact matched-run delta | **Yomumi Harness**, alongside the runner and CI reporter. |
 
 These are role comparisons, not head-to-head speed rankings. The [pstack guide](https://github.com/cursor/plugins/tree/main/pstack/docs/guide) inspired the short entry point and task-based guides. No pstack skills or code are bundled. The Rust CLI uses [roxmltree](https://github.com/RazrFalcon/roxmltree) for XML, [serde_json](https://github.com/serde-rs/json) for JSON, and [RustCrypto SHA-2](https://github.com/RustCrypto/hashes/tree/master/sha2) for fingerprints. See [Cargo.lock](Cargo.lock).
+
+### Contribute
+
+The best first contribution is a **small public-safe case the current tool handles poorly**, with the Bun command, observed verdict, and expected verdict. Try the [contributor checklist](CONTRIBUTING.md) and [verification guide](docs/guide/07-verification.md) before changing the parser. [Open a GitHub issue](https://github.com/Lumichandesu/yomumi-harness/issues/new) if you can share a minimal fixture. Keep private logs and credentials out of issues.
 
 ### Scope and privacy
 
