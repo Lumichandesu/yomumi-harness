@@ -150,6 +150,9 @@ fn parse(raw: &[u8], delta: bool) -> Checked<Report> {
         order: Vec::new(),
     };
     for node in root.descendants().filter(|n| tag(*n) == Some("testcase")) {
+        if node.children().any(|child| matches!(tag(child), Some("flakyFailure" | "rerunFailure"))) {
+            return Err(());
+        }
         r.counts.tests += 1;
         let file = relative_file(attr(node, "file"));
         let fc = file
@@ -457,5 +460,25 @@ fn main() {
             }
             std::process::exit(2);
         }
+    }
+}
+
+#[cfg(test)]
+mod retry_tests {
+    use super::*;
+
+    fn report(marker: &str) -> Vec<u8> {
+        format!(r#"<testsuites name="bun test" tests="1" failures="0" skipped="0"><testcase file="fixture.test.ts" name="retry">{marker}</testcase></testsuites>"#).into_bytes()
+    }
+
+    #[test]
+    fn retry_markers_cannot_become_clean_evidence() {
+        let expected = ["fixture.test.ts".to_owned()];
+        for tag in ["flakyFailure", "rerunFailure"] {
+            let data = report(&format!("<{tag} message=\"retry\"/>"));
+            assert!(compact(&data, 6, false, Some(0), &expected).is_err());
+            assert!(compare(&report(""), &data, 0, 0).is_err());
+        }
+        assert!(compact(&report(""), 6, false, Some(0), &expected).is_ok());
     }
 }

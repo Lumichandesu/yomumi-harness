@@ -60,6 +60,8 @@ def test(bun, bench):
         skip='<testcase file="a.test.ts" name="one"><skipped/></testcase>'
         for data,code in [
             (special(skip,skipped=1),0), (special(error,errors=1),1),
+            (special(a.replace("/>", "><flakyFailure/></testcase>")),0),
+            (special(a.replace("/>", "><rerunFailure/></testcase>")),0),
             (special(a,prefix="\ufeff"),0),(special(a,prefix="\ufeff\ufeff"),0),
             (special(a,root_ns='xmlns="urn:other"'),0),
             (special(a.replace("one","bad\x01")),0),

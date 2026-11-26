@@ -47,6 +47,8 @@ def snap(raw: bytes, limit: int = 8, include_files: bool = False, *,
     by_file = {}
     unknown_file = 0
     for case in rows:
+        if any(child.tag in ("flakyFailure", "rerunFailure") for child in case):
+            raise ValueError("Retry evidence is not comparable")
         file = relative_file(case.get("file", ""))
         if file:
             counters = by_file.setdefault(file, {"tests": 0, "failed": 0, "skipped": 0})

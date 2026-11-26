@@ -10,6 +10,12 @@
 
 **Comparison:** Test identity includes file, class, name, and line as emitted in the reports. It refuses ambiguous changes in duplicate identities, skip cases, inconsistent counts or exits, and differences in observed identities. Moving a test so that its recorded line changes can also make the pair incomparable. This is conservative by design.
 
+## Retries
+
+Reports that explicitly include Bun's `flakyFailure` or `rerunFailure` markers are not accepted as clean evidence. Compact and compare return exit 2. For a first-attempt result, rerun without retries and investigate the original failure.
+
+We observed Bun 1.4.5 pass a test on retry while its JUnit output contained **no retry marker**. A report that omits retry history is indistinguishable from a first-attempt pass to this CLI. Disable per-test retries in strict verification runs or keep separate runner-log evidence. See [the Bun reporter specification](https://bun.sh/docs/test/reporters#retried-tests).
+
 ## Troubleshooting
 
 | Symptom | Check next |

@@ -2,7 +2,7 @@
   <img src="docs/assets/yomumi-brand.svg" alt="Yomumi logo and wordmark" width="256">
 </p>
 
-<h1 align="center">Yomumi Harness</h1>
+<h1 align="center">Yomumi Harness · Bun JUnit Test Harness</h1>
 <p align="center"><strong>Compare Bun test runs without mistaking missing tests for fixes.</strong></p>
 <p align="center">Local CLI · Rust · Bun JUnit · <a href="LICENSE">MIT</a></p>
 <p align="center">
@@ -14,7 +14,7 @@
   <a href="AGENT-START.md">Agent entry point</a>
 </p>
 
-Bun answers **“Did this command pass?”** Yomumi Harness adds **“Did we run the intended files, and are the before and after results comparable?”** It keeps the original JUnit report local and hands reviewers or agents a compact JSON result.
+Yomumi Harness is an open-source test harness for comparing Bun JUnit XML reports and delivering compact test evidence to developers and coding agents. Bun answers **“Did this command pass?”** Yomumi Harness adds **“Did we run the intended files, and are the before and after results comparable?”** It keeps the original JUnit report local and hands reviewers or agents a compact JSON result.
 
 ## Try it
 
@@ -111,6 +111,8 @@ target/release/yomumi-evidence compare before.xml after.xml --before-exit 1 --af
 ~~~
 
 `matched` means comparable, **not** passed or safe to merge. Read the change labels. See [all exit codes and troubleshooting](docs/guide/04-reference.md).
+
+[Changelog](CHANGELOG.md) · [Report format and retry limitations](docs/guide/04-reference.md#retries)
 
 ## Choose your workflow
 
