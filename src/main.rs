@@ -439,7 +439,9 @@ fn run(mut args: impl Iterator<Item = String>, mode: &str) -> Checked<(Value, i3
             match arg.as_str() {
                 "--limit" => limit = args.next().ok_or(())?.parse().map_err(|_| ())?,
                 "--files" => files = true,
-                "--bun-exit" => exit = Some(args.next().ok_or(())?.parse().map_err(|_| ())?),
+                "--bun-exit" if exit.is_none() => {
+                    exit = Some(args.next().ok_or(())?.parse().map_err(|_| ())?);
+                }
                 "--expect-file" => {
                     if expect.len() == 256 {
                         return Err(());
@@ -465,6 +467,9 @@ fn run_compare(mut args: impl Iterator<Item = String>, summary_only: bool) -> Co
             "--after-exit" => &mut eb,
             _ => return Err("invalid_arguments"),
         };
+        if dest.is_some() {
+            return Err("invalid_arguments");
+        }
         *dest = Some(
             args.next()
                 .ok_or("invalid_arguments")?

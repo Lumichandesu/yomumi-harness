@@ -173,3 +173,31 @@ fn summary_only_keeps_all_totals_without_listing_tests() {
     assert_eq!(failed["reason"], "invalid_arguments");
     assert!(failed.get("changeCounts").is_none());
 }
+
+#[test]
+fn duplicate_compact_exit_cannot_override_the_observed_exit() {
+    let after = report("after.xml");
+    for first in ["0", "1"] {
+        let (code, result) = run(&[
+            "compact", after.to_str().unwrap(), "--bun-exit", first,
+            "--bun-exit", "0", "--expect-file", "examples/fixture.test.ts",
+        ]);
+        assert_eq!(code, 2);
+        assert_eq!(result["status"], "unverified");
+    }
+}
+
+#[test]
+fn duplicate_compare_exits_cannot_override_observed_exits() {
+    let before = report("before.xml");
+    let after = report("after.xml");
+    for (flag, value) in [("--before-exit", "1"), ("--before-exit", "0"), ("--after-exit", "0"), ("--after-exit", "1")] {
+        let (code, result) = run(&[
+            "compare", "--diagnostics", before.to_str().unwrap(), after.to_str().unwrap(),
+            flag, value, "--before-exit", "1", "--after-exit", "0",
+        ]);
+        assert_eq!(code, 2);
+        assert_eq!(result["verdict"], "incomplete");
+        assert_eq!(result["reason"], "invalid_arguments");
+    }
+}

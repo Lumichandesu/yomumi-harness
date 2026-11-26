@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- Reject repeated runner exit flags in Rust compact and compare instead of silently using the last value.
+
 - Keep new regressions in the capped default comparison list ahead of fixes and changed failures. Retained rows stay in report order; totals, verdicts, and exit codes are unchanged.
 
 - Treat explicit Bun JUnit retry markers (`flakyFailure`, `rerunFailure`) as incomplete evidence instead of ignoring them. Both commands stop with exit 2 even when the runner's final exit is 0. Plain reports keep their existing behavior.
