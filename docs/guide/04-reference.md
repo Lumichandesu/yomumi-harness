@@ -6,7 +6,7 @@
 | `compact` without scope | Summary only; no verdict | Not a scoped invocation | Report or arguments couldn't be validated. |
 | `compare` | `matched`; inspect changes | Not used | `incomplete`, or inputs couldn't be validated. |
 
-**Inputs:** Bun JUnit XML, at most 8 MiB per file. Use UTF-8 and repo-relative JS/TS test paths. Each testcase must have a non-blank name; unnamed rows cannot be accepted as complete evidence. A scoped summary requires an actual Bun exit and at least one explicit expected file; repeated `--expect-file` entries select up to 256 files. `--files` emits capped per-file counts; `--limit` selects 1–12 failure clusters (default 6).
+**Inputs:** Bun JUnit XML, at most 8 MiB per file. Use UTF-8 and repo-relative JS/TS test paths. Declared top-level suite counts must agree with their testcase rows. Each testcase must have a non-blank name; unnamed rows cannot be accepted as complete evidence. A scoped summary requires an actual Bun exit and at least one explicit expected file; repeated `--expect-file` entries select up to 256 files. `--files` emits capped per-file counts; `--limit` selects 1–12 failure clusters (default 6).
 
 Supply each runner exit flag exactly once. Duplicate exit flags are invalid even when their values agree; capture each Bun exit immediately.
 

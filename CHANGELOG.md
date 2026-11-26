@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- Reject reports whose declared top-level suite counts disagree with their testcase rows, even when the overall totals match.
+
 - Treat missing or blank testcase names as incomplete evidence in both commands, rather than allowing a scoped pass for unidentifiable rows.
 
 - Reject repeated runner exit flags in Rust compact and compare instead of silently using the last value.

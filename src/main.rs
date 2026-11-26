@@ -106,6 +106,43 @@ struct Report {
     order: Vec<CaseKey>,
 }
 
+fn count_value(n: &str) -> Checked<usize> {
+    if n.is_empty() || n.len() > 6 || !n.bytes().all(|b| b.is_ascii_digit()) {
+        return Err(());
+    }
+    n.parse().map_err(|_| ())
+}
+
+fn validate_suite_counts(root: Node<'_, '_>) -> Checked<()> {
+    for suite in root.children().filter(|n| tag(*n) == Some("testsuite")) {
+        let mut observed = Counts::default();
+        for case in suite.children().filter(|n| tag(*n) == Some("testcase")) {
+            observed.tests += 1;
+            for item in case.children() {
+                match tag(item) {
+                    Some("failure") => observed.failures += 1,
+                    Some("error") => observed.errors += 1,
+                    Some("skipped") => observed.skipped += 1,
+                    _ => {}
+                }
+            }
+        }
+        for (key, count) in [
+            ("tests", observed.tests),
+            ("failures", observed.failures),
+            ("errors", observed.errors),
+            ("skipped", observed.skipped),
+        ] {
+            if let Some(declared) = suite.attribute(key) {
+                if count_value(declared)? != count {
+                    return Err(());
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn parse(raw: &[u8], delta: bool) -> Checked<Report> {
     let input = std::str::from_utf8(raw)
         .map_err(|_| ())?
@@ -130,10 +167,7 @@ fn parse(raw: &[u8], delta: bool) -> Checked<Report> {
         let n = root
             .attribute(key)
             .unwrap_or(if key == "errors" { "0" } else { "" });
-        if n.is_empty() || n.len() > 6 || !n.bytes().all(|b| b.is_ascii_digit()) {
-            return Err(());
-        }
-        n.parse().map_err(|_| ())
+        count_value(n)
     };
     let expected = Counts {
         tests: number("tests")?,
@@ -264,6 +298,7 @@ fn parse(raw: &[u8], delta: bool) -> Checked<Report> {
     if r.counts != expected || r.counts.tests == 0 {
         return Err(());
     }
+    validate_suite_counts(root)?;
     Ok(r)
 }
 
@@ -598,4 +633,20 @@ fn blank_case_identity_cannot_verify_a_report() {
         assert!(compact(xml.as_bytes(), 6, false, Some(0), &scope).is_err());
         assert!(compare(xml.as_bytes(), xml.as_bytes(), 0, 0, false).is_err());
     }
+}
+
+#[test]
+fn declared_suite_totals_must_match_even_if_root_totals_match() {
+    let report = |alpha: &str, beta: &str| format!(
+        r#"<testsuites name="bun test" tests="2" failures="0" skipped="0">
+        <testsuite name="alpha" tests="{alpha}" failures="0" skipped="0"><testcase name="one" file="alpha.test.ts"/></testsuite>
+        <testsuite name="beta" tests="{beta}" failures="0" skipped="0"><testcase name="two" file="beta.test.ts"/></testsuite>
+        </testsuites>"#
+    );
+    let scope = ["alpha.test.ts".to_owned(), "beta.test.ts".to_owned()];
+    let good = report("1", "1");
+    let bad = report("2", "0");
+    assert_eq!(compact(good.as_bytes(), 6, false, Some(0), &scope).unwrap().1, 0);
+    assert!(compact(bad.as_bytes(), 6, false, Some(0), &scope).is_err());
+    assert!(compare(good.as_bytes(), bad.as_bytes(), 0, 0, false).is_err());
 }
