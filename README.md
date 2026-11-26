@@ -20,7 +20,8 @@ Bun tells you whether a command passed. Yomumi Harness helps you check **which f
 | **Faster to process?** | **30.644 → 1.301 ms** median to compact a real Bun report, about **23.6×** vs. our Python reference. | [Linux data](docs/evidence/linux-latency.csv) · [Speed and methodology](#measured-speed) |
 | **Same behavior?** | **284/284** Rust/Python comparisons matched in parsed JSON and exit code on the Linux test suite. | [Parity runner](parity.py) · [Evidence ledger](docs/guide/03-measurement.md#evidence-ledger) |
 | **Does it catch false green?** | On Windows, a filtered Bun run exited **0**, but Harness returned **`incomplete`** because it ran fewer tests. | [Windows replay](docs/evidence/guide-replay-windows.json) · [Repeat the case](docs/guide/01-first-run.md#case-2-a-green-run-that-ran-less) |
-| **Smaller handoff?** | **880 → 513 bytes** on one fixture (**41.7%** smaller). This is not a token measurement. | [Windows smoke output](docs/evidence/windows-smoke.json) |
+| **Fewer payload tokens?** | **266 → 159** on the first-run fixture; **4,794 → 157** on the repeated-failure fixture. | [Token method and replay](docs/guide/05-token-budget.md) |
+| **Fewer bytes?** | **880 → 513 bytes** on one fixture (**41.7%** smaller). This is not a token measurement. | [Windows smoke output](docs/evidence/windows-smoke.json) |
 
 ### What the tool catches
 
@@ -48,6 +49,12 @@ Same Linux x86-64 host and inputs, Python 3.12 and Rust 1.100.0 release build, B
 The sample is a public fixture, not production evidence. Summary output can still contain file paths and deterministic hashes.
 
 </details>
+
+### Why this uses fewer tokens
+
+![Token chart: 266 to 159 tokens on two tests, and 4,794 to 157 on the repeated-failure fixture; each scale starts from that fixture’s original report.](docs/assets/token-payload.svg)
+
+The point is to let an agent decide whether a run is trustworthy and where to look first **without reading every stack trace or passing row**. Keep the full report for targeted follow-up. This measures only the text passed as evidence with `o200k_base`, not total prompts, cost, or model quality. [See the measurements and reproduce them](docs/guide/05-token-budget.md).
 
 ## Quick start
 
@@ -87,7 +94,15 @@ target/release/yomumi-evidence compare before.xml after.xml --before-exit 1 --af
 | Review a patch or hand evidence to an agent | [Review recipes and copyable prompts](docs/guide/02-review-recipes.md) |
 | Reproduce a number or check its limitations | [Measurement and evidence ledger](docs/guide/03-measurement.md) |
 | Fix an unverified result without hiding the problem | [Reference and recovery](docs/guide/04-reference.md) |
+| See exactly what each test layer proves | [Verification guide](docs/guide/07-verification.md) |
+| Fork for a monorepo, a review gate, or a different runner | [Fork and adapt](docs/guide/06-fork-and-adapt.md) |
 | Change the CLI or add a fixture | [Contributor checklist](CONTRIBUTING.md) |
+
+## Who benefits
+
+- **Bun developers** get a scoped report for a focused test run and a compact diff for the same suite before and after a change.
+- **AI-assisted reviewers** can send small, structured evidence first and pull the full details only when necessary.
+- **Tool builders** can fork the parser and verdict policy, or add an adapter for another runner. [What to keep, change, and test in a fork](docs/guide/06-fork-and-adapt.md).
 
 ## What we built and why
 

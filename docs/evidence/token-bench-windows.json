@@ -1,0 +1,36 @@
+{
+  "encoding": "o200k_base",
+  "tokenizer": "gpt-tokenizer@2.9.0",
+  "bun": "1.4.5",
+  "platform": "win32",
+  "results": [
+    {
+      "file": "examples/fixture.test.ts",
+      "tests": 2,
+      "failures": 1,
+      "clusters": 1,
+      "junit": {
+        "bytes": 880,
+        "tokens": 266
+      },
+      "summary": {
+        "bytes": 513,
+        "tokens": 159
+      }
+    },
+    {
+      "file": "examples/token-scale.test.ts",
+      "tests": 100,
+      "failures": 10,
+      "clusters": 1,
+      "junit": {
+        "bytes": 16097,
+        "tokens": 4794
+      },
+      "summary": {
+        "bytes": 521,
+        "tokens": 157
+      }
+    }
+  ]
+}

@@ -7,6 +7,10 @@ Start with the decision you need to make, not a list of flags. A runner status, 
 3. [Performance and proof](03-measurement.md): read the numbers, reproduce them, and find the evidence behind each claim.
 4. [Reference and recovery](04-reference.md): exit codes, supported scope, and how to recover without weakening checks.
 
+5. [Token budget](05-token-budget.md): see what was measured and why.
+6. [Fork and adapt](06-fork-and-adapt.md): map a new use case to the files and tests you need.
+7. [Verification](07-verification.md): know what each test layer proves and what it doesn't.
+
 ## Decision map
 
 ~~~mermaid
