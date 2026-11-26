@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- Treat missing or blank testcase names as incomplete evidence in both commands, rather than allowing a scoped pass for unidentifiable rows.
+
 - Reject repeated runner exit flags in Rust compact and compare instead of silently using the last value.
 
 - Keep new regressions in the capped default comparison list ahead of fixes and changed failures. Retained rows stay in report order; totals, verdicts, and exit codes are unchanged.

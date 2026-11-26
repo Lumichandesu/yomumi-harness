@@ -150,6 +150,10 @@ fn parse(raw: &[u8], delta: bool) -> Checked<Report> {
         order: Vec::new(),
     };
     for node in root.descendants().filter(|n| tag(*n) == Some("testcase")) {
+        let name = attr(node, "name");
+        if name.trim().is_empty() {
+            return Err(());
+        }
         if node.children().any(|child| matches!(tag(child), Some("flakyFailure" | "rerunFailure"))) {
             return Err(());
         }
@@ -168,7 +172,6 @@ fn parse(raw: &[u8], delta: bool) -> Checked<Report> {
         if items.next().is_some() {
             return Err(());
         }
-        let name = attr(node, "name");
         let signal = match item.and_then(tag) {
             Some("failure") => {
                 r.counts.failures += 1;
@@ -249,9 +252,6 @@ fn parse(raw: &[u8], delta: bool) -> Checked<Report> {
                 name.into(),
                 attr(node, "line").into(),
             ];
-            if name.is_empty() {
-                return Err(());
-            }
             r.cases
                 .entry(key.clone())
                 .or_insert_with(|| {
@@ -588,4 +588,14 @@ fn late_regression_survives_the_detail_cap() {
     let rows = out["changes"].as_array().unwrap();
     assert_eq!(rows.len(), 12);
     assert_eq!(rows.iter().filter(|row| row["change"] == "regression").count(), 1);
+}
+
+#[test]
+fn blank_case_identity_cannot_verify_a_report() {
+    for name in ["", "   "] {
+        let xml = format!(r#"<testsuites name="bun test" tests="1" failures="0" skipped="0"><testsuite><testcase name="{name}" file="example.test.ts"/></testsuite></testsuites>"#);
+        let scope = ["example.test.ts".to_owned()];
+        assert!(compact(xml.as_bytes(), 6, false, Some(0), &scope).is_err());
+        assert!(compare(xml.as_bytes(), xml.as_bytes(), 0, 0, false).is_err());
+    }
 }
