@@ -32,4 +32,4 @@ Expect `unverified`, `skipped: 1`, and `skipped_tests`. The Rust-only [integrati
 cargo test --locked --test replay
 ~~~
 
-Cargo may need network access to fetch dependencies for the first build. Run with `--offline` after they are cached; the commands do not install or invoke Bun, Python, or a model. To recreate fresh reports with the Bun runner, follow [First real run](../../docs/guide/01-first-run.md).
+Cargo may need network access to fetch dependencies for the first build. Run with `--offline` after they are cached; the commands do not install or invoke Bun, Python, or a model. For a before/after pair with the same failure count, see [Equal failure counts](../../docs/guide/09-equal-counts.md). To recreate fresh reports with the Bun runner, follow [First real run](../../docs/guide/01-first-run.md).

@@ -1,0 +1,55 @@
+{
+  "platform": "Windows x64",
+  "bun": "1.4.5",
+  "scope": "Public fixture only",
+  "runnerExits": {
+    "baseline": 1,
+    "moved-failure": 1,
+    "different-failure": 1
+  },
+  "deltas": {
+    "different-failure": {
+      "afterFailed": 1,
+      "afterSha256": "28d5a0b5ec22d18894173cfe1a3ab4e1a9ba430ec63a02acd257d4e8ceb71095",
+      "beforeFailed": 1,
+      "beforeSha256": "ca5fe18484d58de9460fc810d16b6bf0beb3fde1f9c32af7fb60922e87112286",
+      "changeCount": 1,
+      "changes": [
+        {
+          "change": "changed_failure",
+          "file": "examples/review-regression.test.ts",
+          "testId": "818385e9c5096b30"
+        }
+      ],
+      "files": 1,
+      "kind": "yomumi.matched-test-delta",
+      "schemaVersion": 1,
+      "tests": 2,
+      "verdict": "matched"
+    },
+    "moved-failure": {
+      "afterFailed": 1,
+      "afterSha256": "0880dcc8db9fcb026b7147efb001c5eb4700c5dd4b54b75a27f6556d8fda6451",
+      "beforeFailed": 1,
+      "beforeSha256": "ca5fe18484d58de9460fc810d16b6bf0beb3fde1f9c32af7fb60922e87112286",
+      "changeCount": 2,
+      "changes": [
+        {
+          "change": "fixed",
+          "file": "examples/review-regression.test.ts",
+          "testId": "818385e9c5096b30"
+        },
+        {
+          "change": "regression",
+          "file": "examples/review-regression.test.ts",
+          "testId": "d21ec3eeba516b3a"
+        }
+      ],
+      "files": 1,
+      "kind": "yomumi.matched-test-delta",
+      "schemaVersion": 1,
+      "tests": 2,
+      "verdict": "matched"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="bun test" tests="2" assertions="2" failures="1" skipped="0" time="0.0111432">
+  <testsuite name="examples\review-regression.test.ts" file="examples\review-regression.test.ts" tests="2" assertions="2" failures="1" skipped="0" time="0.0016223" hostname="">
+    <testcase name="order retains the requested quantity" classname="" time="0.000351" file="examples\review-regression.test.ts" line="5" assertions="1">
+      <failure type="AssertionError" message="expect(received).toBe(expected)&#10;&#10;Expected: 2&#10;Received: 1&#10;">AssertionError: expect(received).toBe(expected)&#10;&#10;Expected: 2&#10;Received: 1&#10;&#10;      at examples/review-regression.test.ts:7:20&#10;</failure>
+    </testcase>
+    <testcase name="empty cart has no items" classname="" time="0.000022" file="examples\review-regression.test.ts" line="9" assertions="1" />
+  </testsuite>
+</testsuites>

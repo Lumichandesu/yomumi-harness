@@ -56,3 +56,35 @@ fn green_but_wrong_expected_file_is_not_verified() {
     assert_eq!(evidence["verdict"], "unverified");
     assert_eq!(evidence["problems"][0], "file_coverage_mismatch");
 }
+
+fn compare_regression_fixture(candidate: &str) -> (i32, Value) {
+    let before = report("baseline.xml");
+    let after = report(candidate);
+    run(&["compare", before.to_str().unwrap(), after.to_str().unwrap(),
+          "--before-exit", "1", "--after-exit", "1"])
+}
+
+#[test]
+fn equal_failure_totals_can_hide_a_new_regression() {
+    let (code, delta) = compare_regression_fixture("moved-failure.xml");
+    assert_eq!(code, 0);
+    assert_eq!(delta["verdict"], "matched");
+    assert_eq!(delta["beforeFailed"], 1);
+    assert_eq!(delta["afterFailed"], 1);
+    assert_eq!(delta["changeCount"], 2);
+    let mut changes: Vec<_> = delta["changes"].as_array().unwrap().iter()
+        .map(|x| x["change"].as_str().unwrap()).collect();
+    changes.sort_unstable();
+    assert_eq!(changes, vec!["fixed", "regression"]);
+}
+
+#[test]
+fn same_failing_test_with_a_different_signal_is_not_a_fix() {
+    let (code, delta) = compare_regression_fixture("different-failure.xml");
+    assert_eq!(code, 0);
+    assert_eq!(delta["verdict"], "matched");
+    assert_eq!(delta["beforeFailed"], 1);
+    assert_eq!(delta["afterFailed"], 1);
+    assert_eq!(delta["changeCount"], 1);
+    assert_eq!(delta["changes"][0]["change"], "changed_failure");
+}

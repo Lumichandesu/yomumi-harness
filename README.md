@@ -44,6 +44,10 @@ Expect `matched`, two tests, and one `fixed` change. [Replay all three saved rep
 
 The [walkthrough](docs/guide/01-first-run.md) reproduces all three cases in Bash or PowerShell. The passing filtered run still names the same **file**, but Bun records one skipped test. Exact test identity and skip checks prevent a narrower run from looking like a fix.
 
+### Same number of failures, new bug
+
+One failure before, one failure after. The total didn't move, but the order test was fixed and the cart test broke. Harness reports **one fix and one regression**. If the same test still fails with a different assertion result, it reports **`changed_failure`**, not a fix. [Try both cases](docs/guide/09-equal-counts.md) · [Actual output](docs/evidence/equal-count-windows.json).
+
 ### Measured speed
 
 ![Median CLI milliseconds on Linux: 30.6 to 1.3 compact, 32.1 to 1.3 compare, 76.5 to 12.7 compact 10,000 expanded rows.](docs/assets/report-latency.svg)
@@ -112,7 +116,7 @@ target/release/yomumi-evidence compare before.xml after.xml --before-exit 1 --af
 
 | I want to… | Go here |
 | --- | --- |
-| Run the three real sample cases | [First run](docs/guide/01-first-run.md) |
+| Run the original three real sample cases | [First run](docs/guide/01-first-run.md) |
 | Review a patch or hand evidence to an agent | [Review recipes and copyable prompts](docs/guide/02-review-recipes.md) |
 | Reproduce a number or check its limitations | [Measurement and evidence ledger](docs/guide/03-measurement.md) |
 | Fix an unverified result without hiding the problem | [Reference and recovery](docs/guide/04-reference.md) |

@@ -15,6 +15,8 @@ Start with the decision you need to make, not a list of flags. A runner status, 
 
 8. [Integrate locally](08-integrate.md): use evidence in a real review check without conflating matching and passing.
 
+9. [Equal failure counts](09-equal-counts.md): find the new regression or changed assertion hiding behind the same total.
+
 ## Decision map
 
 ~~~mermaid

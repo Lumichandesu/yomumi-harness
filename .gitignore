@@ -7,3 +7,6 @@ node_modules/
 !/examples/replay/before.xml
 !/examples/replay/after.xml
 !/examples/replay/filtered.xml
+!/examples/replay/baseline.xml
+!/examples/replay/different-failure.xml
+!/examples/replay/moved-failure.xml
