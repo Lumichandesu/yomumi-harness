@@ -36,3 +36,5 @@ This guide borrows the documentation pattern of a short front door and task-orie
 [Case study: when the 12-row cap hid a new regression](10-bounded-summaries.md)
 
 [Focused tests: catch rows Bun silently omitted](11-focused-tests.md)
+
+[Reframe a vague request before writing code](12-reframe.md)
