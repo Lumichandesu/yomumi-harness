@@ -10,6 +10,10 @@
 
 **Comparison:** Test identity includes file, class, name, and line as emitted in the reports. It refuses ambiguous changes in duplicate identities, skip cases, inconsistent counts or exits, and differences in observed identities. Moving a test so that its recorded line changes can also make the pair incomparable. This is conservative by design.
 
+## Compare without individual rows
+
+Use `compare --summary-only BEFORE AFTER --before-exit EXIT --after-exit EXIT`. On a matched comparison, `changeCounts` counts every `fixed`, `regression`, and `changed_failure`. It replaces the capped `changes` array with counts and `omittedChanges`; both report hashes are still included. Combine it with `--diagnostics` before the paths to get reason codes on exit 2. The Python fallback does not support either flag. See the [worked overflow example](10-bounded-summaries.md).
+
 ## Explain an incomplete comparison
 
 Put `--diagnostics` before the report paths in the Rust CLI. On exit 2, `reason` contains the first blocker detected. No raw path, test name, or report text is added. Successful output and default JSON are unchanged. The Python fallback does not implement this flag.

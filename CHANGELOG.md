@@ -8,6 +8,7 @@
 - Reports from a runner that discards retry history cannot be checked for retries from XML alone. See [Retry limitations](docs/guide/04-reference.md#retries).
 
 ### Added
+- Rust `compare --summary-only` emits complete category counts and report hashes without per-test rows. Default output and exit codes are unchanged.
 - Rust `compare --diagnostics` adds a fixed reason code to incomplete comparisons without exposing report paths or changing default output.
 - Built-in help for `compact` and `compare`, including scope inputs and exit meanings. Normal invocations still return JSON.
 

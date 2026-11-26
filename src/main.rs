@@ -341,7 +341,7 @@ fn compact(
 
 type Compared<T> = Result<T, &'static str>;
 
-fn compare(a: &[u8], b: &[u8], ea: i32, eb: i32) -> Compared<(Value, i32)> {
+fn compare(a: &[u8], b: &[u8], ea: i32, eb: i32, summary_only: bool) -> Compared<(Value, i32)> {
     let a_report = parse(a, true).map_err(|_| "before_report_invalid")?;
     let b_report = parse(b, true).map_err(|_| "after_report_invalid")?;
     let af = a_report.counts.errors + a_report.counts.failures;
@@ -377,7 +377,7 @@ fn compare(a: &[u8], b: &[u8], ea: i32, eb: i32) -> Compared<(Value, i32)> {
         return Err("test_identity_mismatch");
     }
     let mut changes = Vec::new();
-    let mut num = 0;
+    let mut totals = [0usize; 3];
     for k in &b_report.order {
         let x = &a_report.cases[k];
         let y = &b_report.cases[k];
@@ -393,18 +393,29 @@ fn compare(a: &[u8], b: &[u8], ea: i32, eb: i32) -> Compared<(Value, i32)> {
                 return Err("ambiguous_test_identity");
             }
         } else if x[0] != y[0] {
-            num += 1;
-            if changes.len() < 12 {
-                changes.push(json!({"file":k[0],"testId":&sha(k.join("\0"))[..16],
-                    "change":if y[0].is_none() {"fixed"} else if x[0].is_none() {"regression"} else {"changed_failure"}}));
+            let (idx, label) = if y[0].is_none() {
+                (0, "fixed")
+            } else if x[0].is_none() {
+                (1, "regression")
+            } else {
+                (2, "changed_failure")
+            };
+            totals[idx] += 1;
+            if !summary_only && changes.len() < 12 {
+                changes.push(json!({"file":k[0],"testId":&sha(k.join("\0"))[..16],"change":label}));
             }
         }
     }
-    Ok((
-        json!({"schemaVersion":1,"kind":"yomumi.matched-test-delta","verdict":"matched","tests":b_report.counts.tests,
-        "files":b_report.files.len(),"beforeFailed":af,"afterFailed":bf,"changeCount":num,"changes":changes,"beforeSha256":sha(a),"afterSha256":sha(b)}),
-        0,
-    ))
+    let num = totals.iter().sum::<usize>();
+    let mut output = json!({"schemaVersion":1,"kind":"yomumi.matched-test-delta","verdict":"matched","tests":b_report.counts.tests,
+        "files":b_report.files.len(),"beforeFailed":af,"afterFailed":bf,"changeCount":num,"beforeSha256":sha(a),"afterSha256":sha(b)});
+    if summary_only {
+        output["changeCounts"] = json!({"fixed":totals[0],"regression":totals[1],"changed_failure":totals[2]});
+        output["omittedChanges"] = json!(num);
+    } else {
+        output["changes"] = json!(changes);
+    }
+    Ok((output, 0))
 }
 
 fn run(mut args: impl Iterator<Item = String>, mode: &str) -> Checked<(Value, i32)> {
@@ -431,7 +442,7 @@ fn run(mut args: impl Iterator<Item = String>, mode: &str) -> Checked<(Value, i3
     }
 }
 
-fn run_compare(mut args: impl Iterator<Item = String>) -> Compared<(Value, i32)> {
+fn run_compare(mut args: impl Iterator<Item = String>, summary_only: bool) -> Compared<(Value, i32)> {
     let first = args.next().ok_or("invalid_arguments")?;
     let second = args.next().ok_or("invalid_arguments")?;
     let (mut ea, mut eb) = (None, None);
@@ -455,6 +466,7 @@ fn run_compare(mut args: impl Iterator<Item = String>) -> Compared<(Value, i32)>
         &bounded(&second).map_err(|_| "after_report_unavailable")?,
         ea,
         eb,
+        summary_only,
     )
 }
 
@@ -484,18 +496,23 @@ fn main() {
                 return;
             }
             "compare" => {
-                println!("Usage: yomumi-evidence compare [--diagnostics] BEFORE AFTER --before-exit EXIT --after-exit EXIT\n\nCapture actual Bun exits immediately. Use the same test selection in both runs.\nExit 0 means reports are comparable, not that the candidate passed.\nInspect afterFailed, changeCount, and changes. Exit 2 means incomplete or invalid.\nPut --diagnostics before BEFORE to add a fixed reason code on exit 2.");
+                println!("Usage: yomumi-evidence compare [--diagnostics] [--summary-only] BEFORE AFTER --before-exit EXIT --after-exit EXIT\n\nCapture actual Bun exits immediately. Use the same test selection in both runs.\nExit 0 means reports are comparable, not that the candidate passed.\nInspect afterFailed, changeCount, and changes. Exit 2 means incomplete or invalid.\nPut optional flags before BEFORE. --diagnostics adds a reason on exit 2.\n--summary-only shows complete category counts without listing individual tests.");
                 return;
             }
             _ => {}
         }
     }
     let (output, exit) = if mode == "compare" {
-        let diagnostics = args.as_slice().first().is_some_and(|arg| arg == "--diagnostics");
-        if diagnostics {
+        let (mut diagnostics, mut summary_only) = (false, false);
+        while let Some(option) = args.as_slice().first() {
+            match option.as_str() {
+                "--diagnostics" => diagnostics = true,
+                "--summary-only" => summary_only = true,
+                _ => break,
+            }
             args.next();
         }
-        run_compare(args).unwrap_or_else(|reason| {
+        run_compare(args, summary_only).unwrap_or_else(|reason| {
             let mut output = json!({"schemaVersion":1,"kind":"yomumi.matched-test-delta","verdict":"incomplete"});
             if diagnostics {
                 output["reason"] = json!(reason);
@@ -525,7 +542,7 @@ mod retry_tests {
         for tag in ["flakyFailure", "rerunFailure"] {
             let data = report(&format!("<{tag} message=\"retry\"/>"));
             assert!(compact(&data, 6, false, Some(0), &expected).is_err());
-            assert!(compare(&report(""), &data, 0, 0).is_err());
+            assert!(compare(&report(""), &data, 0, 0, false).is_err());
         }
         assert!(compact(&report(""), 6, false, Some(0), &expected).is_ok());
     }

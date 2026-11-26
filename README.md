@@ -116,6 +116,8 @@ target/release/yomumi-evidence compare before.xml after.xml --before-exit 1 --af
 
 When a comparison is incomplete, use `yomumi-evidence compare --diagnostics BEFORE AFTER --before-exit EXIT --after-exit EXIT` for a stable reason such as `after_skipped_tests`. The flag does not change verdicts, exit codes, or successful output.
 
+For a compact review that still counts every fix, regression, and changed failure, use Rust `compare --summary-only`. See the [15-test case where a regression fell outside the default list](docs/guide/10-bounded-summaries.md).
+
 [Changelog](CHANGELOG.md) · [Report format and retry limitations](docs/guide/04-reference.md#retries)
 
 ## Choose your workflow

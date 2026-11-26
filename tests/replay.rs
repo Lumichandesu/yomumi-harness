@@ -153,3 +153,23 @@ fn compare_diagnostics_distinguish_bad_args_from_changed_test_identity() {
     assert_eq!(code, 2);
     assert_eq!(value["reason"], "test_identity_mismatch");
 }
+#[test]
+fn summary_only_keeps_all_totals_without_listing_tests() {
+    let before = report("baseline.xml");
+    let after = report("moved-failure.xml");
+    let (code, result) = run(&[
+        "compare", "--summary-only", before.to_str().unwrap(), after.to_str().unwrap(),
+        "--before-exit", "1", "--after-exit", "1",
+    ]);
+    assert_eq!(code, 0);
+    assert_eq!(result["verdict"], "matched");
+    assert_eq!(result["changeCount"], 2);
+    assert_eq!(result["changeCounts"], serde_json::json!({"fixed":1,"regression":1,"changed_failure":0}));
+    assert!(result.get("changes").is_none());
+    assert_eq!(result["omittedChanges"], 2);
+    assert!(result.get("beforeSha256").is_some());
+    let (code, failed) = run(&["compare", "--summary-only", "--diagnostics"]);
+    assert_eq!(code, 2);
+    assert_eq!(failed["reason"], "invalid_arguments");
+    assert!(failed.get("changeCounts").is_none());
+}
