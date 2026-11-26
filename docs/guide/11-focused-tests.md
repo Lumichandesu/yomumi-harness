@@ -2,7 +2,19 @@
 
 Bun 1.4.5 may entirely omit the other tests in a file when `test.only` is present. In this example both runs return 0 and both JUnit reports show zero skipped; only the recorded test count changes.
 
-## PowerShell reproduction
+## Run it directly
+
+~~~sh
+cargo run --locked -- run-scoped --expect-tests 2 --expect-file examples/focused-run.test.ts
+~~~
+
+The Rust verification test covers a full pass, a focused run that looks green, and a genuine test failure. It needs local Bun:
+
+~~~sh
+cargo test --locked --test focused_bun -- --ignored --nocapture
+~~~
+
+## Inspect the separate Bun and Rust commands in PowerShell
 
 Run at the repository root. Reports go into a fresh temporary directory.
 

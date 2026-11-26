@@ -42,6 +42,16 @@ Run `yomumi-evidence --help`, `yomumi-evidence compact --help`, or `yomumi-evide
 
 ## Use it in your project
 
+From the project root, run Bun and verify the evidence in one Rust command. Replace `2` with the count from a trusted full run and repeat `--expect-file` for each intended file.
+
+~~~sh
+yomumi-evidence run-scoped --expect-tests 2 --expect-file tests/example.test.ts
+~~~
+
+Exit `0` is a verified pass for that scope, `1` is a verified test failure, and `2` means unverified. [Runner details](docs/guide/04-reference.md#run-scoped)
+
+### Verify an existing JUnit report
+
 | Start with… | Run… | Get… |
 | --- | --- | --- |
 | One Bun report and expected test files | `compact` | A scoped verdict and top failure clusters. |

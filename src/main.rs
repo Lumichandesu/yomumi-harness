@@ -11,7 +11,7 @@ use std::{
 const MAX: usize = 8 * 1024 * 1024;
 type Checked<T> = Result<T, ()>;
 
-fn bounded(path: &str) -> Checked<Vec<u8>> {
+fn bounded(path: impl AsRef<std::path::Path>) -> Checked<Vec<u8>> {
     let mut data = Vec::new();
     File::open(path)
         .map_err(|_| ())?
@@ -537,6 +537,90 @@ fn run_compare(mut args: impl Iterator<Item = String>, summary_only: bool) -> Co
     )
 }
 
+struct ScopedReport(std::path::PathBuf);
+
+impl ScopedReport {
+    fn create() -> std::io::Result<Self> {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(std::io::Error::other)?
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("yomumi-evidence-{}-{nonce}", std::process::id()));
+        std::fs::create_dir(&dir)?;
+        Ok(Self(dir))
+    }
+
+    fn path(&self) -> std::path::PathBuf {
+        self.0.join("run.xml")
+    }
+}
+
+impl Drop for ScopedReport {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(self.path());
+        let _ = std::fs::remove_dir(&self.0);
+    }
+}
+
+fn run_scoped(mut args: impl Iterator<Item = String>) -> Compared<(Value, i32)> {
+    use std::process::{Command, Stdio};
+
+    let mut count = None;
+    let mut files = Vec::new();
+    let mut seen = BTreeSet::new();
+    while let Some(flag) = args.next() {
+        let value = args.next().ok_or("invalid_arguments")?;
+        match flag.as_str() {
+            "--expect-tests" if count.is_none() => {
+                let n = count_value(&value).map_err(|_| "invalid_arguments")?;
+                if n == 0 {
+                    return Err("invalid_arguments");
+                }
+                count = Some(n);
+            }
+            "--expect-file" if files.len() < 256 => {
+                let file = relative_file(&value).ok_or("invalid_arguments")?;
+                if !seen.insert(file.clone()) {
+                    return Err("invalid_arguments");
+                }
+                files.push(file);
+            }
+            _ => return Err("invalid_arguments"),
+        }
+    }
+    let count = count.ok_or("invalid_arguments")?;
+    if files.is_empty() {
+        return Err("invalid_arguments");
+    }
+    let root = std::env::current_dir().map_err(|_| "project_directory_unavailable")?;
+    let root = root.canonicalize().map_err(|_| "project_directory_unavailable")?;
+    for file in &files {
+        let resolved = root.join(file).canonicalize().map_err(|_| "expected_file_unavailable")?;
+        if !resolved.starts_with(&root) || !resolved.is_file() {
+            return Err("expected_file_unavailable");
+        }
+    }
+    let temp = ScopedReport::create().map_err(|_| "report_directory_unavailable")?;
+    let path = temp.path();
+    let mut output = std::ffi::OsString::from("--reporter-outfile=");
+    output.push(&path);
+    let exit = Command::new("bun")
+        .args(["test", "--reporter=junit"])
+        .arg(output)
+        .args(files.iter().map(|file| format!("./{file}")))
+        .current_dir(root)
+        .env_remove("BUN_OPTIONS")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map_err(|_| "bun_start_failed")?
+        .code()
+        .ok_or("bun_exit_unavailable")?;
+    let bytes = bounded(path).map_err(|_| "bun_report_unavailable")?;
+    compact(&bytes, 6, false, Some(exit), &files, Some(count)).map_err(|_| "bun_report_invalid")
+}
+
 fn main() {
     let Ok(mut args) = std::env::args_os()
         .skip(1)
@@ -553,11 +637,15 @@ fn main() {
     let mode = args.next().unwrap_or_default();
     let help_flag = |s: &str| matches!(s, "-h" | "--help");
     if help_flag(&mode) && args.len() == 0 {
-        println!("yomumi-evidence: verify Bun JUnit test evidence\n\nCommands:\n  compact  Summarize one report and optionally verify its file scope.\n  compare  Find fixes, regressions, and changed failures across matched runs.\n\nUse compact --help or compare --help for usage.\nCompare exit 0 means reports are comparable; it does not certify a pass.");
+        println!("yomumi-evidence: verify Bun JUnit test evidence\n\nCommands:\n  compact  Summarize one report and optionally verify its file scope.\n  compare  Find fixes, regressions, and changed failures across matched runs.\n  run-scoped  Run Bun and verify the intended files and test count.\n\nUse a command with --help for usage.\nCompare exit 0 means reports are comparable; it does not certify a pass.");
         return;
     }
     if args.len() == 1 && help_flag(&args.as_slice()[0]) {
         match mode.as_str() {
+            "run-scoped" => {
+                println!("Usage: yomumi-evidence run-scoped --expect-tests N --expect-file FILE [--expect-file FILE ...]\n\nRun from the project root with Bun on PATH. Supply an exact count from a trusted full run.\nExit 0 scoped pass, 1 scoped failure, 2 unverified or invalid.");
+                return;
+            }
             "compact" => {
                 println!("Usage: yomumi-evidence compact REPORT [--limit N] [--files]\n       [--bun-exit EXIT --expect-file FILE ... [--expect-tests N]]\n\nCapture Bun's actual exit and repeat --expect-file for every intended test file.\nOptionally require an exact test count from a trusted full run.\n--limit: 1-12 clusters (default 6). --files: include per-file counts.\nScoped exits: 0 scoped pass, 1 scoped failure, 2 unverified or invalid.\nWithout a scope, exit 0 only means a summary was produced.");
                 return;
@@ -586,6 +674,8 @@ fn main() {
             }
             (output, 2)
         })
+    } else if mode == "run-scoped" {
+        run_scoped(args).unwrap_or_else(|reason| (json!({"status":"unverified","reason":reason}), 2))
     } else {
         run(args, &mode).unwrap_or_else(|()| {
             (json!({"status":"unverified","reason":"missing_invalid_or_incomplete_bun_junit"}), 2)
