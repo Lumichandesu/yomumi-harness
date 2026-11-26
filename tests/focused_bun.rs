@@ -103,3 +103,36 @@ fn baseline_catches_replacement_with_the_same_test_count() {
         }
     }
 }
+
+#[test]
+#[ignore = "needs a local Bun executable"]
+fn scoped_runner_does_not_load_project_dotenv() {
+    use std::{fs, time::{SystemTime, UNIX_EPOCH}};
+    let nonce = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+    let dir = std::env::temp_dir().join(format!("yomumi-dotenv-test-{}-{nonce}", std::process::id()));
+    fs::create_dir(&dir).unwrap();
+    struct Cleanup(std::path::PathBuf);
+    impl Drop for Cleanup {
+        fn drop(&mut self) {
+            for file in [".env", "fixture.test.ts"] {
+                let _ = fs::remove_file(self.0.join(file));
+            }
+            let _ = fs::remove_dir(&self.0);
+        }
+    }
+    let _cleanup = Cleanup(dir.clone());
+    fs::write(dir.join(".env"), "YOMUMI_EVIDENCE_SYNTHETIC_DOTENV=loaded\n").unwrap();
+    fs::write(
+        dir.join("fixture.test.ts"),
+        r#"import { test, expect } from "bun:test";
+test("keeps project dotenv disabled", () => expect(process.env.YOMUMI_EVIDENCE_SYNTHETIC_DOTENV).toBeUndefined());"#,
+    ).unwrap();
+    let run = Command::new(env!("CARGO_BIN_EXE_yomumi-evidence"))
+        .current_dir(&dir)
+        .args(["run-scoped", "--expect-tests", "1", "--expect-file", "fixture.test.ts"])
+        .env_remove("YOMUMI_EVIDENCE_SYNTHETIC_DOTENV")
+        .output().unwrap();
+    let json: Value = serde_json::from_slice(&run.stdout).unwrap();
+    assert_eq!(run.status.code(), Some(0), "{json}");
+    assert_eq!(json["verdict"], "scoped-pass");
+}

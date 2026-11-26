@@ -4,6 +4,9 @@
 
 ### Fixed
 
+- Validate nested Bun `describe` suite totals bottom-up, avoiding false rejections on valid nested reports.
+
+- Disable Bun's automatic `.env` loading in `run-scoped`; the command also continues to clear `BUN_OPTIONS`.
 - Bound `run-scoped` to a 300-second default Bun deadline. An expired run is unverified and never uses the partial report.
 
 - Reject reports whose declared top-level suite counts disagree with their testcase rows, even when the overall totals match.

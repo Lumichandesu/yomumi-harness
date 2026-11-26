@@ -3,7 +3,7 @@ use roxmltree::{Document, Node};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
     fs::File,
     io::Read,
 };
@@ -114,10 +114,23 @@ fn count_value(n: &str) -> Checked<usize> {
 }
 
 fn validate_suite_counts(root: Node<'_, '_>) -> Checked<()> {
-    for suite in root.children().filter(|n| tag(*n) == Some("testsuite")) {
+    let suites: Vec<_> = root.descendants().filter(|n| tag(*n) == Some("testsuite")).collect();
+    let mut subtotals = HashMap::new();
+    for suite in suites.into_iter().rev() {
         let mut observed = Counts::default();
-        for case in suite.children().filter(|n| tag(*n) == Some("testcase")) {
-            observed.tests += 1;
+        for case in suite.children() {
+            match tag(case) {
+                Some("testsuite") => {
+                    let total: Counts = subtotals.remove(&case.id()).ok_or(())?;
+                    observed.tests += total.tests;
+                    observed.failures += total.failures;
+                    observed.errors += total.errors;
+                    observed.skipped += total.skipped;
+                    continue;
+                }
+                Some("testcase") => observed.tests += 1,
+                _ => continue,
+            }
             for item in case.children() {
                 match tag(item) {
                     Some("failure") => observed.failures += 1,
@@ -138,6 +151,9 @@ fn validate_suite_counts(root: Node<'_, '_>) -> Checked<()> {
                     return Err(());
                 }
             }
+        }
+        if suite.parent().is_some_and(|parent| tag(parent) == Some("testsuite")) {
+            subtotals.insert(suite.id(), observed);
         }
     }
     Ok(())
@@ -660,7 +676,7 @@ fn run_scoped(mut args: impl Iterator<Item = String>) -> Compared<(Value, i32)> 
     let mut output = std::ffi::OsString::from("--reporter-outfile=");
     output.push(&path);
     let child = Command::new("bun")
-        .args(["test", "--reporter=junit"])
+        .args(["--no-env-file", "test", "--reporter=junit"])
         .arg(output)
         .args(files.iter().map(|file| format!("./{file}")))
         .current_dir(root)
@@ -826,4 +842,14 @@ fn declared_suite_totals_must_match_even_if_root_totals_match() {
     assert_eq!(compact(good.as_bytes(), 6, false, Some(0), &scope, None).unwrap().1, 0);
     assert!(compact(bad.as_bytes(), 6, false, Some(0), &scope, None).is_err());
     assert!(compare(good.as_bytes(), bad.as_bytes(), 0, 0, false).is_err());
+}
+
+#[test]
+fn nested_bun_suites_contribute_to_parent_counts() {
+    let xml = |nested_count: usize| format!(
+        r#"<testsuites name="bun test" tests="2" failures="0" skipped="0"><testsuite tests="2"><testcase name="direct" file="mix.test.ts"/><testsuite tests="{nested_count}"><testsuite tests="1"><testcase name="nested" file="mix.test.ts"/></testsuite></testsuite></testsuite></testsuites>"#
+    );
+    let scope = ["mix.test.ts".into()];
+    assert_eq!(compact(xml(1).as_bytes(), 6, false, Some(0), &scope, Some(2)).unwrap().1, 0);
+    assert!(compact(xml(0).as_bytes(), 6, false, Some(0), &scope, Some(2)).is_err());
 }
