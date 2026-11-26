@@ -2,6 +2,7 @@
 
 | Layer | Question | How to rerun |
 | --- | --- | --- |
+| Rust CLI replay | Can the built tool correctly process saved, actual Bun reports without installing Bun? | `cargo test --locked --test replay`: one fix, green with one skipped case, and wrong file scope. |
 | Python unit tests | Do isolated examples reject bad input and preserve the basic evidence contract? | `python -m unittest -q` (18 tests at the recorded Windows run). |
 | Rust/Python parity | Did the faster CLI keep the same JSON outcome and exit code on the tested inputs? | `python parity.py` after a locked Rust build; 284 matched outcomes in the recorded Linux suite. |
 | Real Bun workflow | Does the result survive an actual runner rather than a hand-built XML example? | [First real run](01-first-run.md) with Bun; observed outcomes are in the [Windows receipt](../evidence/guide-replay-windows.json). |

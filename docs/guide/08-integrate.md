@@ -25,7 +25,7 @@ Generate `before.xml` and `after.xml` and capture `$beforeRc` and `$afterRc` exa
 | Observed on Windows using Bun 1.4.5 | Script result | Exit |
 | --- | --- | ---: |
 | Same two tests, one fixed, no candidate failures | `evidence-ready` | 0 |
-| A test disappears from a passing candidate report | Reports not comparable | 2 |
+| A passing candidate report contains one skipped test | Reports not comparable | 2 |
 | The same tests match but a failure remains | Candidate still has failing tests | 1 |
 
 [Captured verification outputs](../evidence/review-recipe-windows.json). `evidence-ready` describes the two reports, not permission to merge or a claim of full coverage.

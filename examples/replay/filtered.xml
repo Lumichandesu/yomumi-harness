@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="bun test" tests="2" assertions="1" failures="0" skipped="1" time="0.00924">
+  <testsuite name="examples\fixture.test.ts" file="examples\fixture.test.ts" tests="2" assertions="1" failures="0" skipped="1" time="0.0009167" hostname="">
+    <testcase name="accepted order retains quantity" classname="" time="0" file="examples\fixture.test.ts" line="3" assertions="0">
+      <skipped />
+    </testcase>
+    <testcase name="empty cart has zero total" classname="" time="0.000072" file="examples\fixture.test.ts" line="8" assertions="1" />
+  </testsuite>
+</testsuites>

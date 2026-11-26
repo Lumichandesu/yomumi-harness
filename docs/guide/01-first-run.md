@@ -1,6 +1,6 @@
 # First real run
 
-Use the public [order and cart fixture](../../examples/fixture.test.ts). No personal data, tokens, model calls, or repository changes are involved. Run commands from the repository root with Bun and Rust installed. `cargo build --release --locked` is required once.
+Use the public [order and cart fixture](../../examples/fixture.test.ts). No personal data, tokens, model calls, or repository changes are involved. Want to try the outcomes first? Use [the saved reports](../../examples/replay/README.md) without Bun. Run commands from the repository root with Bun and Rust installed. `cargo build --release --locked` is required once.
 
 ## Case 1: a real fix on the same tests
 
@@ -44,7 +44,7 @@ bun test ./examples/fixture.test.ts --test-name-pattern 'empty cart' --reporter=
 target/release/yomumi-evidence compare before.xml filtered.xml --before-exit "$before_rc" --after-exit "$filtered_rc"
 ~~~
 
-On PowerShell, run the same Bun command, assign `$filteredRc = $LASTEXITCODE`, and run the `.exe` with `$beforeRc` and `$filteredRc`. The comparator returns **2 / `incomplete`**. It does not report a fix. A single-file scope check cannot infer which individual tests you intended; this is why matched identities matter.
+On PowerShell, run the same Bun command, assign `$filteredRc = $LASTEXITCODE`, and run the `.exe` with `$beforeRc` and `$filteredRc`. The comparator returns **2 / `incomplete`**. It does not report a fix. Bun still records the quantity test in the XML as `skipped`. The Harness refuses this report even though the file is present and Bun's exit is 0. If a runner omits a test row entirely instead, the matched identity check guards against that separately.
 
 ## Case 3: a valid report from the wrong scope
 

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="394" viewBox="0 0 720 394" role="img" aria-labelledby="title desc">
-<title id="title">Three Bun outcomes, three different decisions</title><desc id="desc">Windows fixture: one fixed test when two runs match; incomplete when a passing run omits a test; unverified when the expected file is wrong.</desc>
+<title id="title">Three Bun outcomes, three different decisions</title><desc id="desc">Windows fixture: one fixed test when two runs match; incomplete when a passing run skips a test; unverified when the expected file is wrong.</desc>
 <rect x="1" y="1" width="718" height="392" rx="22" fill="#151729" stroke="#373951"/>
 <g font-family="system-ui, Segoe UI, Arial, sans-serif">
 <text x="24" y="40" font-size="25" fill="#f4f3fd" font-weight="700" text-anchor="start">A green run is not always comparable</text>
@@ -12,7 +12,7 @@
 <text x="612" y="127" font-size="14" fill="#8ce5b0" font-weight="700" text-anchor="middle">MATCHED</text>
 <rect x="22" y="180" width="676" height="77" fill="#23263c" rx="13"/>
 <text x="39" y="209" font-size="16" fill="#a4a9ca" font-weight="700" text-anchor="start">02</text>
-<text x="76" y="210" font-size="19" fill="#f4f3fd" font-weight="700" text-anchor="start">Green, but one test disappeared</text>
+<text x="76" y="210" font-size="19" fill="#f4f3fd" font-weight="700" text-anchor="start">Green, but one test was skipped</text>
 <text x="76" y="236" font-size="15" fill="#c5c7d9" font-weight="400" text-anchor="start">Bun exits 0 · filtered run does not match the baseline</text>
 <rect x="545" y="196" width="134" height="29" fill="#34394f" rx="14"/>
 <text x="612" y="216" font-size="14" fill="#ffd583" font-weight="700" text-anchor="middle">INCOMPLETE</text>

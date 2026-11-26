@@ -18,28 +18,15 @@ Bun answers **“Did this command pass?”** Yomumi Harness adds **“Did we run
 
 ## Try it
 
-With [Rust](https://www.rust-lang.org/tools/install), [Bun](https://bun.sh/docs/installation), and Python 3.10+ available:
+With [Rust](https://www.rust-lang.org/tools/install) available, run from the checkout. This uses two checked-in reports captured from the public Bun fixture. **No Bun or Python required for the replay.**
 
 ~~~sh
 git clone https://github.com/Lumichandesu/yomumi-harness.git
 cd yomumi-harness
-cargo build --release --locked
-python example_smoke.py
+cargo run --release --locked -- compare examples/replay/before.xml examples/replay/after.xml --before-exit 1 --after-exit 0
 ~~~
 
-Selected fields from the [recorded output](docs/evidence/installed-cli-windows.json):
-
-~~~json
-{
-  "test_count": 2,
-  "fixes": 1,
-  "baseline": "scoped-fail",
-  "candidate": "scoped-pass",
-  "wrong_scope": "unverified"
-}
-~~~
-
-The first run fails on purpose. The second fixes it. Giving the same green report the wrong expected file returns `unverified`, not pass. For a more deceptive case, [replay a green run that skipped a test](docs/guide/01-first-run.md#case-2-a-green-run-that-ran-less).
+Expect `matched`, two tests, and one `fixed` change. [Replay all three saved reports](examples/replay/README.md), or [generate fresh reports with Bun](docs/guide/01-first-run.md) to reproduce the original workflow. Cargo may fetch dependencies on the first build.
 
 ## Results at a glance
 
@@ -47,15 +34,15 @@ The first run fails on purpose. The second fixes it. Giving the same green repor
 | --- | --- | --- |
 | **Faster to process?** | **30.644 → 1.301 ms** median to compact a real Bun report, about **23.6×** vs. our Python reference. | [Linux data](docs/evidence/linux-latency.csv) · [Speed and methodology](#measured-speed) |
 | **Same behavior?** | **284/284** Rust/Python comparisons matched in parsed JSON and exit code on the Linux test suite. | [Parity runner](parity.py) · [Evidence ledger](docs/guide/03-measurement.md#evidence-ledger) |
-| **Does it catch false green?** | On Windows, a filtered Bun run exited **0**, but Harness returned **`incomplete`** because it ran fewer tests. | [Windows replay](docs/evidence/guide-replay-windows.json) · [Repeat the case](docs/guide/01-first-run.md#case-2-a-green-run-that-ran-less) |
+| **Does it catch false green?** | On Windows, a filtered Bun run exited **0**, but Harness returned **`incomplete`** because one of the two tests was skipped. | [Windows replay](docs/evidence/guide-replay-windows.json) · [Repeat the case](docs/guide/01-first-run.md#case-2-a-green-run-that-ran-less) |
 | **Fewer payload tokens?** | **266 → 159** on the first-run fixture; **4,794 → 157** on the repeated-failure fixture. | [Token method and replay](docs/guide/05-token-budget.md) |
 | **Fewer bytes?** | **880 → 513 bytes** on one fixture (**41.7%** smaller). This is not a token measurement. | [Windows smoke output](docs/evidence/windows-smoke.json) |
 
 ### What the tool catches
 
-![Windows replay: 2 matched tests and 1 fix; a green filtered run gives incomplete; wrong expected file gives unverified.](docs/assets/review-outcomes.svg)
+![Windows replay: 2 matched tests and 1 fix; a green filtered run with one skipped test gives incomplete; wrong expected file gives unverified.](docs/assets/review-outcomes.svg)
 
-The [walkthrough](docs/guide/01-first-run.md) reproduces all three cases in Bash or PowerShell. The passing filtered run still covers the same **file**, which is why the two-run **test identity** check matters.
+The [walkthrough](docs/guide/01-first-run.md) reproduces all three cases in Bash or PowerShell. The passing filtered run still names the same **file**, but Bun records one skipped test. Exact test identity and skip checks prevent a narrower run from looking like a fix.
 
 ### Measured speed
 

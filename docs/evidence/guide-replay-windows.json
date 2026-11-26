@@ -21,7 +21,8 @@
     },
     "filtered": {
       "exit": 2,
-      "verdict": "incomplete"
+      "verdict": "incomplete",
+      "bun_reported_skipped": 1
     },
     "wrong_scope": {
       "exit": 2,

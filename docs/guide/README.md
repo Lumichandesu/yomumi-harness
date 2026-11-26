@@ -2,6 +2,8 @@
 
 Start with the decision you need to make, not a list of flags. A runner status, a verified file scope, and a before/after delta answer three different questions.
 
+[Try the saved reports without Bun or Python](../../examples/replay/README.md).
+
 1. [First real run](01-first-run.md): generate three reports and see why “green” can be insufficient.
 2. [Review recipes](02-review-recipes.md): reusable checklists and copyable agent briefs.
 3. [Performance and proof](03-measurement.md): read the numbers, reproduce them, and find the evidence behind each claim.
