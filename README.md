@@ -2,19 +2,19 @@
   <img src="docs/assets/yomumi-brand.svg" alt="Yomumi logo and wordmark" width="256">
 </p>
 
-<h1 align="center">Yomumi Harness · Bun JUnit Test Harness</h1>
+<h1 align="center">Yomumi Harness — Rust Test Harness for Bun JUnit XML</h1>
 <p align="center"><strong>Compare Bun test runs without mistaking missing tests for fixes.</strong></p>
 <p align="center">Local CLI · Rust · Bun JUnit · <a href="LICENSE">MIT</a></p>
 <p align="center">
   <a href="#try-it">Try it</a> ·
-  <a href="#results-at-a-glance">Results</a> ·
   <a href="#install">Install</a> ·
   <a href="#use-it-in-your-project">Use in a project</a> ·
+  <a href="#results-at-a-glance">Results</a> ·
   <a href="docs/guide/README.md">Field guide</a> ·
   <a href="AGENT-START.md">Agent entry point</a>
 </p>
 
-Yomumi Harness is an open-source test harness for comparing Bun JUnit XML reports and delivering compact test evidence to developers and coding agents. Bun answers **“Did this command pass?”** Yomumi Harness adds **“Did we run the intended files, and are the before and after results comparable?”** It keeps the original JUnit report local and hands reviewers or agents a compact JSON result.
+Yomumi Harness is an open-source Rust CLI for Bun test automation. It validates Bun JUnit XML, compares before/after runs for regressions, and produces compact JSON evidence for developers, CI, and coding agents. Bun answers **“Did this command pass?”** Yomumi Harness adds **“Did we run the intended files, and are the before and after results comparable?”** It keeps the original JUnit report local and hands reviewers or agents a compact JSON result.
 
 ## Try it
 
@@ -28,6 +28,52 @@ cargo run --release --locked -- compare examples/replay/before.xml examples/repl
 
 Expect `matched`, two tests, and one `fixed` change. [Replay all three saved reports](examples/replay/README.md), or [generate fresh reports with Bun](docs/guide/01-first-run.md) to reproduce the original workflow. Cargo may fetch dependencies on the first build.
 
+## Install
+
+Use the release binary built by `cargo build --release --locked`: `target/release/yomumi-evidence` (`.exe` on Windows). Or install from a checked-out copy:
+
+~~~sh
+cargo install --path . --locked
+~~~
+
+This is a source install, not a registry or package-manager release. Cargo may download the locked dependencies when building for the first time. The installed CLI runs offline and does not require Python or Bun to read an existing report. [Windows source-install smoke](docs/evidence/installed-cli-windows.json).
+
+Run `yomumi-evidence --help`, `yomumi-evidence compact --help`, or `yomumi-evidence compare --help` for built-in command and exit-code help.
+
+## Use it in your project
+
+| Start with… | Run… | Get… |
+| --- | --- | --- |
+| One Bun report and expected test files | `compact` | A scoped verdict and top failure clusters. |
+| Two reports from the same selection | `compare` | A before/after delta or a clear stop when the results cannot be compared. |
+| A matched delta, but a team-specific rule | [Local review example](docs/guide/08-integrate.md) | An explicit decision without changing the runner or auto-merging a branch. |
+
+**Check a real project run.** Run Bun from your project root and record its actual exit before another command overwrites it:
+
+~~~sh
+bun_rc=0
+expected_tests=2 # Replace with the count from a known full run.
+bun test ./tests/example.test.ts --reporter=junit --reporter-outfile=run.xml || bun_rc=$?
+/path/to/yomumi-harness/target/release/yomumi-evidence compact run.xml \
+  --bun-exit "$bun_rc" --expect-file tests/example.test.ts --expect-tests "$expected_tests"
+~~~
+
+In PowerShell capture `$LASTEXITCODE` immediately after Bun. Repeat `--expect-file` for each intended file. Pin the test count from a known full run with `--expect-tests` when you need to catch silently omitted rows. [Try the `.only` regression](docs/guide/11-focused-tests.md). `0` = scoped pass, `1` = scoped failure, `2` = unverified or invalid. Without scope arguments, the command only summarizes.
+
+**Compare two runs on the same selection.** These example codes are for a failing baseline and passing candidate. Use the codes you actually captured.
+
+~~~sh
+target/release/yomumi-evidence compare before.xml after.xml --before-exit 1 --after-exit 0
+~~~
+
+`matched` means comparable, **not** passed or safe to merge. Read the change labels. See [all exit codes and troubleshooting](docs/guide/04-reference.md).
+
+When a comparison is incomplete, use `yomumi-evidence compare --diagnostics BEFORE AFTER --before-exit EXIT --after-exit EXIT` for a stable reason such as `after_skipped_tests`. The flag does not change verdicts, exit codes, or successful output.
+
+For a compact review that still counts every fix, regression, and changed failure, use Rust `compare --summary-only`. See the [15-test case that exposed the regression hidden by the old detail cap](docs/guide/10-bounded-summaries.md).
+
+[Changelog](CHANGELOG.md) · [Report format and retry limitations](docs/guide/04-reference.md#retries)
+
 ## Results at a glance
 
 | Question | What we observed | Where to verify |
@@ -35,6 +81,7 @@ Expect `matched`, two tests, and one `fixed` change. [Replay all three saved rep
 | **Faster to process?** | **30.644 → 1.301 ms** median to compact a real Bun report, about **23.6×** vs. our Python reference. | [Linux data](docs/evidence/linux-latency.csv) · [Speed and methodology](#measured-speed) |
 | **Same behavior?** | **284/284** historical Rust/Python comparisons matched in parsed JSON and exit code on the Linux test suite. | [Historical parity runner](https://github.com/Lumichandesu/yomumi-harness/blob/4c66227afdeaaab038c8121f130d5c28c8caf5ac/parity.py) · [Evidence ledger](docs/guide/03-measurement.md#evidence-ledger) |
 | **Does it catch false green?** | On Windows, a filtered Bun run exited **0**, but Harness returned **`incomplete`** because one of the two tests was skipped. | [Windows replay](docs/evidence/guide-replay-windows.json) · [Repeat the case](docs/guide/01-first-run.md#case-2-a-green-run-that-ran-less) |
+| **Does it catch omitted tests?** | A Bun `.only` run returned **0** and reported **0 skipped**, but the Rust scoped count check rejected **1 of 2** observed tests. | [Focused test demo](docs/guide/11-focused-tests.md) |
 | **Fewer payload tokens?** | **266 → 159** on the first-run fixture; **4,794 → 157** on the repeated-failure fixture. | [Token method and replay](docs/guide/05-token-budget.md) |
 | **Fewer bytes?** | **880 → 513 bytes** on one fixture (**41.7%** smaller). This is not a token measurement. | [Windows smoke output](docs/evidence/windows-smoke.json) |
 
@@ -74,51 +121,6 @@ The sample is a public fixture, not production evidence. Summary output can stil
 ![Token chart: 266 to 159 tokens on two tests, and 4,794 to 157 on the repeated-failure fixture; each scale starts from that fixture’s original report.](docs/assets/token-payload.svg)
 
 The point is to let an agent decide whether a run is trustworthy and where to look first **without reading every stack trace or passing row**. Keep the full report for targeted follow-up. This measures only the text passed as evidence with `o200k_base`, not total prompts, cost, or model quality. [See the measurements and reproduce them](docs/guide/05-token-budget.md).
-
-## Install
-
-Use the release binary built by `cargo build --release --locked`: `target/release/yomumi-evidence` (`.exe` on Windows). Or install from a checked-out copy:
-
-~~~sh
-cargo install --path . --locked
-~~~
-
-This is a source install, not a registry or package-manager release. Cargo may download the locked dependencies when building for the first time. The installed CLI runs offline and does not require Python or Bun to read an existing report. [Windows source-install smoke](docs/evidence/installed-cli-windows.json).
-
-Run `yomumi-evidence --help`, `yomumi-evidence compact --help`, or `yomumi-evidence compare --help` for built-in command and exit-code help.
-
-## Use it in your project
-
-| Start with… | Run… | Get… |
-| --- | --- | --- |
-| One Bun report and expected test files | `compact` | A scoped verdict and top failure clusters. |
-| Two reports from the same selection | `compare` | A before/after delta or a clear stop when the results cannot be compared. |
-| A matched delta, but a team-specific rule | [Local review example](docs/guide/08-integrate.md) | An explicit decision without changing the runner or auto-merging a branch. |
-
-**Check a real project run.** Run Bun from your project root and record its actual exit before another command overwrites it:
-
-~~~sh
-bun_rc=0
-bun test ./tests/example.test.ts --reporter=junit --reporter-outfile=run.xml || bun_rc=$?
-/path/to/yomumi-harness/target/release/yomumi-evidence compact run.xml \
-  --bun-exit "$bun_rc" --expect-file tests/example.test.ts
-~~~
-
-In PowerShell capture `$LASTEXITCODE` immediately after Bun. Repeat `--expect-file` for each intended file. `0` = scoped pass, `1` = scoped failure, `2` = unverified or invalid. Without scope arguments, the command only summarizes.
-
-**Compare two runs on the same selection.** These example codes are for a failing baseline and passing candidate. Use the codes you actually captured.
-
-~~~sh
-target/release/yomumi-evidence compare before.xml after.xml --before-exit 1 --after-exit 0
-~~~
-
-`matched` means comparable, **not** passed or safe to merge. Read the change labels. See [all exit codes and troubleshooting](docs/guide/04-reference.md).
-
-When a comparison is incomplete, use `yomumi-evidence compare --diagnostics BEFORE AFTER --before-exit EXIT --after-exit EXIT` for a stable reason such as `after_skipped_tests`. The flag does not change verdicts, exit codes, or successful output.
-
-For a compact review that still counts every fix, regression, and changed failure, use Rust `compare --summary-only`. See the [15-test case that exposed the regression hidden by the old detail cap](docs/guide/10-bounded-summaries.md).
-
-[Changelog](CHANGELOG.md) · [Report format and retry limitations](docs/guide/04-reference.md#retries)
 
 ## Choose your workflow
 
