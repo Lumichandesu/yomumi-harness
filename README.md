@@ -3,45 +3,64 @@
 </p>
 
 <h1 align="center">Yomumi Harness</h1>
-<p align="center"><strong>Compact evidence from Bun test runs, without handing an agent the raw log.</strong></p>
+<p align="center"><strong>Know what actually changed in your Bun tests.</strong></p>
 <p align="center">
+  <a href="#results-at-a-glance">Results</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="docs/guide/README.md">Field guide</a> ·
-  <a href="#choose-a-workflow">Workflows</a> ·
-  <a href="#results">Results</a> ·
-  <a href="#how-it-compares">Comparison</a> ·
-  <a href="AGENT-START.md">Agent quick reference</a>
+  <a href="AGENT-START.md">Agent entry point</a>
 </p>
 
-## Start here
+Bun tells you whether a command passed. Yomumi Harness helps you check **which files ran** and **whether a before/after pair ran the same observed tests**. It emits small JSON for reviewers and agents, without uploading the original report.
 
-Already have Bun and Rust? Run this from the checkout:
+## Results at a glance
+
+| Question | What we observed | Where to verify |
+| --- | --- | --- |
+| **Faster to process?** | **30.644 → 1.301 ms** median to compact a real Bun report, about **23.6×** vs. our Python reference. | [Linux data](docs/evidence/linux-latency.csv) · [Speed and methodology](#measured-speed) |
+| **Same behavior?** | **284/284** Rust/Python comparisons matched in parsed JSON and exit code on the Linux test suite. | [Parity runner](parity.py) · [Evidence ledger](docs/guide/03-measurement.md#evidence-ledger) |
+| **Does it catch false green?** | On Windows, a filtered Bun run exited **0**, but Harness returned **`incomplete`** because it ran fewer tests. | [Windows replay](docs/evidence/guide-replay-windows.json) · [Repeat the case](docs/guide/01-first-run.md#case-2-a-green-run-that-ran-less) |
+| **Smaller handoff?** | **880 → 513 bytes** on one fixture (**41.7%** smaller). This is not a token measurement. | [Windows smoke output](docs/evidence/windows-smoke.json) |
+
+### What the tool catches
+
+![Windows replay: 2 matched tests and 1 fix; a green filtered run gives incomplete; wrong expected file gives unverified.](docs/assets/review-outcomes.svg)
+
+The [walkthrough](docs/guide/01-first-run.md) reproduces all three cases in Bash or PowerShell. The passing filtered run still covers the same **file**, which is why the two-run **test identity** check matters.
+
+### Measured speed
+
+![Median CLI milliseconds on Linux: 30.6 to 1.3 compact, 32.1 to 1.3 compare, 76.5 to 12.7 compact 10,000 expanded rows.](docs/assets/report-latency.svg)
+
+| Workload | Python p50 / p95 | Rust p50 / p95 | Median ratio |
+| --- | ---: | ---: | ---: |
+| Compact actual Bun report (2 tests) | 30.644 / 36.601 ms | 1.301 / 1.626 ms | 23.6× |
+| Compare actual Bun reports (2 tests each) | 32.114 / 41.805 ms | 1.302 / 1.623 ms | 24.7× |
+| Compact expanded fixture (10,000 rows) | 76.475 / 105.210 ms | 12.732 / 16.563 ms | 6.0× |
+
+Same Linux x86-64 host and inputs, Python 3.12 and Rust 1.100.0 release build, Bun 1.4.5. **80 measured calls per engine per workload** after five warm-up pairs, alternating order. Timings include startup and file I/O, not Bun execution. The 10,000 rows were expanded from Bun output, not 10,000 executed tests. Windows was checked for behavior only. [Reproduction steps and limits](docs/guide/03-measurement.md).
+
+<details>
+<summary>See the size comparison</summary>
+
+![One fixture: 880 bytes of XML and 513 bytes of summary JSON.](docs/assets/evidence-size.svg)
+
+The sample is a public fixture, not production evidence. Summary output can still contain file paths and deterministic hashes.
+
+</details>
+
+## Quick start
+
+**1. Build and run the sample** from this checkout. The demo driver uses Python 3.10+ and Bun; the compiled Rust CLI needs neither to read existing reports.
 
 ~~~sh
 cargo build --release --locked
 python example_smoke.py
 ~~~
 
-The example requires Python to drive the demo; the Rust CLI itself does not. Expect **two matched tests, one fix, and a wrong-scope result of `unverified`**. [Follow the full walkthrough](docs/guide/01-first-run.md) to see what the CLI does when a test disappears but Bun still exits successfully.
+Expect two matched tests, one fix, and `unverified` for the wrong expected file. The binary is `target/release/yomumi-evidence` (add `.exe` on Windows).
 
-[For people: field guide](docs/guide/README.md) · [For agents: short entry point](AGENT-START.md) · [For maintainers: verification checklist](CONTRIBUTING.md)
-
-## Why we built it
-
-Yomumi needed an agent to answer two questions after a change: **Did we rerun the intended tests? What actually changed?** A long report is expensive to pass around, and a smaller failure count by itself can hide the fact that a file stopped running.
-
-We open-sourced only the Bun test-evidence layer. The Yomumi application, private tool registry, production reports, and customer data are not part of this repository.
-
-| What we built | Why it matters |
-| --- | --- |
-| `compact`: verify declared counts, runner exit, and the expected file set; group failures and bound the output. | Invalid XML, inconsistent counts, or a wrong file set cannot produce a scoped pass. An unscoped summary makes no pass claim. |
-| `compare`: require the same observed test identities and execution counts before reporting fixes, regressions, or changed failures. | Fewer failures are not counted as an improvement if a test disappears or a duplicate result makes the change ambiguous. |
-| Local Rust CLI with an explicit Python reference. | Reading reports doesn't need an API, cloud upload, or Python at runtime. The reference gives us a second implementation to check the migration against. |
-
-## Quick start
-
-1. **Build once.** From this checkout, run `cargo build --release --locked`. This creates `target/release/yomumi-evidence` (add `.exe` on Windows). Cargo needs access to the locked dependencies on the first build; the resulting CLI reads reports offline.
-2. **Run Bun and capture its exit immediately.** Run from the project under test, using a repo-relative path. This example is POSIX shell. On PowerShell, capture `$LASTEXITCODE` in place of `$?`.
+**2. Check a real project run.** Run Bun from your project root and record its actual exit before another command overwrites it:
 
 ~~~sh
 bun_rc=0
@@ -50,90 +69,43 @@ bun test ./tests/example.test.ts --reporter=junit --reporter-outfile=run.xml || 
   --bun-exit "$bun_rc" --expect-file tests/example.test.ts
 ~~~
 
-3. **Read the verdict.** With an explicit exit and expected file set, `0` means `scoped-pass`, `1` means `scoped-fail`, and `2` means unverified or invalid evidence. Repeat `--expect-file` for each intended file. Without scope arguments, the result is only a summary.
-4. **Compare like with like.** Rerun the same selection on the candidate revision. Pass each invocation’s actual exit; the values below describe one failing baseline and one passing candidate.
+In PowerShell capture `$LASTEXITCODE` immediately after Bun. Repeat `--expect-file` for each intended file. `0` = scoped pass, `1` = scoped failure, `2` = unverified or invalid. Without scope arguments, the command only summarizes.
+
+**3. Compare two runs on the same selection.** These example codes are for a failing baseline and passing candidate. Use the codes you actually captured.
 
 ~~~sh
 target/release/yomumi-evidence compare before.xml after.xml --before-exit 1 --after-exit 0
 ~~~
 
-A `matched` verdict means the observed runs can be compared. It does **not** mean there are no regressions. Read `changeCount` and `changes`; the list shows at most 12 changes.
+`matched` means comparable, **not** passed or safe to merge. Read the change labels. See [all exit codes and troubleshooting](docs/guide/04-reference.md).
 
-## Choose a workflow
+## Choose your workflow
 
-| What you want to know | Start here | What to keep |
-| --- | --- | --- |
-| Did this invocation run the right files? | [Check one report](docs/guide/02-review-recipes.md#check-one-run) | JSON verdict, actual Bun exit, and intended paths. |
-| Did this patch fix a test or just run fewer tests? | [Compare a change](docs/guide/02-review-recipes.md#review-a-change) | Before/after exits, matching selection, and the delta. |
-| Is a new engine faster without dropping work? | [Check a performance claim](docs/guide/03-measurement.md) | Parity result, timed workload, sample count, and latency distribution. |
-| Why did the CLI refuse to compare? | [Troubleshoot the verdict](docs/guide/04-reference.md#troubleshooting) | The first missing fact, not a new run with weaker checks. |
-
-~~~mermaid
-flowchart LR
-    A["Bun report + actual exit + intended paths"] --> B["Compact and check one run"]
-    B -->|Missing or inconsistent evidence| C["Unverified: check the input"]
-    B -->|Scoped result| D["Pass or fail for this run"]
-    E["Two reports + both actual exits"] --> F["Compare observed tests"]
-    F -->|Tests disappeared or evidence is ambiguous| G["Incomplete: no improvement claim"]
-    F -->|Matched| H["Inspect fixes, regressions, and changed failures"]
-~~~
-
-## Cases we contribute
-
-| Public case | What it demonstrates |
+| I want to… | Go here |
 | --- | --- |
-| [Order quantity and empty cart](examples/fixture.test.ts) | Two actual Bun executions with controlled inputs. One assertion fails on the baseline; the same two tests pass on the candidate. The delta reports one fix. |
-| [Wrong file scope](example_smoke.py) | The candidate report still says zero failures. Changing the expected file alone correctly flips the verdict to `unverified`. |
-| [Green run with a missing test](docs/guide/01-first-run.md#case-2-a-green-run-that-ran-less) | Both candidate invocations exit 0, but filtering out a test makes the delta `incomplete`. |
-| [Parity and negative cases](parity.py) | The Rust CLI is checked against the Python reference on real Bun reports, generated Unicode cases, malformed reports, skips, invalid paths, and ambiguous duplicates. |
+| Run the three real sample cases | [First run](docs/guide/01-first-run.md) |
+| Review a patch or hand evidence to an agent | [Review recipes and copyable prompts](docs/guide/02-review-recipes.md) |
+| Reproduce a number or check its limitations | [Measurement and evidence ledger](docs/guide/03-measurement.md) |
+| Fix an unverified result without hiding the problem | [Reference and recovery](docs/guide/04-reference.md) |
+| Change the CLI or add a fixture | [Contributor checklist](CONTRIBUTING.md) |
 
-These are shareable reproductions of the kinds of review Yomumi needs, not copies of customer data or claims about production coverage.
+## What we built and why
 
-## Results
+- **`compact`** groups failures and checks counts, file scope, and Bun’s exit. It does not turn an unscoped report into a pass.
+- **`compare`** checks observed test identities and execution counts before describing fixes, regressions, and changed failures. This is the layer that catches the filtered-run case.
+- **Rust** is the default executable. The Python implementation remains the reference and explicit fallback (`python example_smoke.py --engine python`). No silent fallback on failed or unverified work.
 
-![Bar chart of median Linux CLI latency: Python 30.6, 32.1, and 76.5 ms; Rust 1.3, 1.3, and 12.7 ms.](docs/assets/report-latency.svg)
+### How it compares
 
-| Linux x86-64 workload | Python p50 / p95 | Rust p50 / p95 | p50 ratio |
-| --- | ---: | ---: | ---: |
-| Compact actual Bun report (2 tests) | 30.644 / 36.601 ms | 1.301 / 1.626 ms | 23.6× |
-| Compare actual Bun reports (2 tests each) | 32.114 / 41.805 ms | 1.302 / 1.623 ms | 24.7× |
-| Compact expanded fixture (10,000 rows) | 76.475 / 105.210 ms | 12.732 / 16.563 ms | 6.0× |
-
-**Measurement:** Bun 1.4.5, Python 3.12, Rust 1.100.0 release build. Same host and inputs, 80 measured calls per engine and workload after five warm-up pairs, alternating run order. Timings include process launch, file reads and output, not the Bun test run. The 10,000-row fixture was expanded from Bun output; it was not a run of 10,000 tests. The full Linux parity suite matched **284/284** JSON outcomes and exit codes.
-
-**Windows:** Bun 1.4.5, Python 3.12.10, Rust 1.100.0. The Rust smoke replayed the two tests, found one fix, and rejected the wrong file scope. The baseline went from **880 bytes of XML to 513 bytes of summary JSON** (41.7% smaller on this fixture). This is byte size, not token savings. See the [captured smoke output](docs/evidence/windows-smoke.json). No Windows latency claim.
-
-Reproduce locally with Bun, Rust, and Python 3.10+:
-
-~~~sh
-cargo build --release --locked
-python -m unittest -q
-python example_smoke.py
-python parity.py --bench
-~~~
-
-The smoke example defaults to Rust. `python example_smoke.py --engine python` explicitly selects the fallback. Existing Python CLI commands remain available; there is no silent fallback on a failed or unverified run.
-
-For a claim-by-claim map from docs to checks, see [Evidence ledger](docs/guide/03-measurement.md#evidence-ledger).
-
-## How it compares
-
-| Pick this when you need… | Tool |
+| If you need… | Use… |
 | --- | --- |
-| A full machine-readable report to feed into another tool. | [Bun’s JUnit reporter](https://bun.sh/docs/test/reporters) generates the input we read. |
-| Failure annotations on PRs and GitHub job summaries. | [mikepenz/action-junit-report](https://github.com/mikepenz/action-junit-report) and [dorny/test-reporter](https://github.com/dorny/test-reporter) are designed for GitHub checks and team visibility. |
-| A broader playbook suite for an agent’s engineering workflow. | [Lauren “poteto” Tan’s pstack](https://github.com/cursor/plugins/tree/main/pstack) routes and verifies whole tasks; it is a different layer. |
-| A compact local handoff that checks the intended Bun file set and refuses unmatched before/after evidence. | **Yomumi Harness** adds that check and delta without requiring GitHub or uploading the report. |
+| A full machine-readable report from the runner | [Bun JUnit](https://bun.sh/docs/test/reporters), which generates our input. |
+| PR annotations and GitHub job summaries | [action-junit-report](https://github.com/mikepenz/action-junit-report) or [dorny/test-reporter](https://github.com/dorny/test-reporter). |
+| Playbooks for an agent’s full engineering workflow | [poteto’s pstack](https://github.com/cursor/plugins/tree/main/pstack). |
+| Local scope verification and a compact matched-run delta | **Yomumi Harness**, alongside the runner and CI reporter. |
 
-Use the Harness alongside CI reporters, not in place of them. We measured Rust against our own Python implementation, not against those tools. This project is Bun-specific and does not create GitHub checks or claim full test coverage.
+These are role comparisons, not head-to-head speed rankings. The [pstack guide](https://github.com/cursor/plugins/tree/main/pstack/docs/guide) inspired the short entry point and task-based guides. No pstack skills or code are bundled. The Rust CLI uses [roxmltree](https://github.com/RazrFalcon/roxmltree) for XML, [serde_json](https://github.com/serde-rs/json) for JSON, and [RustCrypto SHA-2](https://github.com/RustCrypto/hashes/tree/master/sha2) for fingerprints. See [Cargo.lock](Cargo.lock).
 
-## Upstream credit
+### Scope and privacy
 
-- [Bun](https://bun.sh/docs/test/reporters) provides the JUnit format and runner. We consume its reports; we don't fork the runner.
-- [roxmltree](https://github.com/RazrFalcon/roxmltree) parses XML, [serde_json](https://github.com/serde-rs/json) writes JSON, and [RustCrypto SHA-2](https://github.com/RustCrypto/hashes/tree/master/sha2) computes fingerprints. Resolved dependency versions are in [Cargo.lock](Cargo.lock).
-- [pstack’s guide](https://github.com/cursor/plugins/tree/main/pstack/docs/guide) inspired the short entry point, task recipes, and separation of verification from the write-up. No pstack skills or code are bundled.
-- The two GitHub reporters above are comparison references, not dependencies. The scope checks, compact schema, matched-test delta, and fixtures live here.
-
-## Sharing and scope
-
-Raw assertion messages, test names, and logs are not printed in normal summary output. Relative paths and deterministic hashes may still be sensitive; review before sharing and never treat fingerprints as anonymization. Keep original reports, revisions, exit codes, and run settings with your local evidence. Each report is capped at 8 MiB. See [MIT license](LICENSE) for the code; the header uses Yomumi’s existing project mark and wordmark.
+This is a shareable part of Yomumi, not the product or its internal tool registry. Public cases use the [order and cart fixture](examples/fixture.test.ts), not customer data or production reports. Keep raw reports, revisions, and runner settings local. Summaries omit raw assertion text and logs, but paths and hashes can still be sensitive. The CLI caps each report at 8 MiB and cannot independently establish that two reports came from the same code or environment. [MIT license](LICENSE).

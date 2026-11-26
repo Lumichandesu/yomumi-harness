@@ -7,6 +7,18 @@ Start with the decision you need to make, not a list of flags. A runner status, 
 3. [Performance and proof](03-measurement.md): read the numbers, reproduce them, and find the evidence behind each claim.
 4. [Reference and recovery](04-reference.md): exit codes, supported scope, and how to recover without weakening checks.
 
+## Decision map
+
+~~~mermaid
+flowchart LR
+    A["Bun report + actual exit + intended paths"] --> B["Compact and check one run"]
+    B -->|Missing or inconsistent evidence| C["Unverified: check the input"]
+    B -->|Scoped result| D["Pass or fail for this run"]
+    E["Two reports + both actual exits"] --> F["Compare observed tests"]
+    F -->|Tests disappeared or evidence is ambiguous| G["Incomplete: no improvement claim"]
+    F -->|Matched| H["Inspect fixes, regressions, and changed failures"]
+~~~
+
 Already know the commands? [Agent quick reference](../../AGENT-START.md). Changing the CLI or evidence rules? [Contributor checklist](../../CONTRIBUTING.md).
 
 This guide borrows the documentation pattern of a short front door and task-oriented pages from [poteto’s pstack guide](https://github.com/cursor/plugins/tree/main/pstack/docs/guide). Yomumi Harness is a local report tool and does not run pstack playbooks.

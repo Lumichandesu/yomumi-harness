@@ -1,20 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 410" width="760" height="410" role="img" aria-labelledby="title desc">
-<title id="title">Bun report processing, Python versus Rust</title>
-<desc id="desc">Median milliseconds: 30.644 versus 1.301 for compaction, 32.114 versus 1.302 for comparison, and 76.475 versus 12.732 for an expanded 10,000-row fixture. Lower is better.</desc>
-<rect x="1" y="1" width="758" height="408" rx="22" fill="#151628" stroke="#303554"/>
-<g font-family="system-ui,Segoe UI,sans-serif" fill="#f7f4ff">
-<text x="30" y="42" font-size="23" font-weight="700">Bun report processing</text>
-<text x="30" y="67" font-size="14" fill="#c5c4de">Linux x86-64 · 80 measured calls per engine · median ms · lower is better</text>
-<rect x="32" y="86" width="14" height="14" rx="3" fill="#a7b4df"/><text x="54" y="98" font-size="14">Python reference</text>
-<rect x="200" y="86" width="14" height="14" rx="3" fill="#ce9fff"/><text x="222" y="98" font-size="14">Rust release CLI</text>
-<path d="M34 117V354" stroke="#3a3d58"/><text x="34" y="375" text-anchor="middle" font-size="12" fill="#c5c4de">0</text>
-<path d="M194 117V354" stroke="#3a3d58"/><text x="194" y="375" text-anchor="middle" font-size="12" fill="#c5c4de">20</text>
-<path d="M354 117V354" stroke="#3a3d58"/><text x="354" y="375" text-anchor="middle" font-size="12" fill="#c5c4de">40</text>
-<path d="M514 117V354" stroke="#3a3d58"/><text x="514" y="375" text-anchor="middle" font-size="12" fill="#c5c4de">60</text>
-<path d="M674 117V354" stroke="#3a3d58"/><text x="674" y="375" text-anchor="middle" font-size="12" fill="#c5c4de">80</text>
-<text x="34" y="132" font-size="14" font-weight="600">Compact actual Bun report (2 tests)</text><rect x="34" y="141" width="245.152" height="13" fill="#a7b4df"/><text x="289.152" y="152" font-size="12">30.6</text><rect x="34" y="159" width="10.408" height="13" fill="#ce9fff"/><text x="54.408" y="170" font-size="12">1.3</text>
-<text x="34" y="210" font-size="14" font-weight="600">Compare actual Bun reports (2 tests each)</text><rect x="34" y="219" width="256.912" height="13" fill="#a7b4df"/><text x="300.912" y="230" font-size="12">32.1</text><rect x="34" y="237" width="10.416" height="13" fill="#ce9fff"/><text x="54.416" y="248" font-size="12">1.3</text>
-<text x="34" y="288" font-size="14" font-weight="600">Compact expanded fixture (10,000 rows)</text><rect x="34" y="297" width="611.8" height="13" fill="#a7b4df"/><text x="655.8" y="308" font-size="12">76.5</text><rect x="34" y="315" width="101.856" height="13" fill="#ce9fff"/><text x="145.856" y="326" font-size="12">12.7</text>
-<text x="722" y="375" font-size="12" text-anchor="end" fill="#c5c4de">ms</text>
-<text x="34" y="396" font-size="12" fill="#c5c4de">Includes process startup and file I/O. Excludes running Bun. Expanded rows are not executed tests.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" role="img" aria-labelledby="title desc">
+<title id="title">Rust versus Python: median Bun report processing time</title><desc id="desc">Measured on Linux. For compaction 30.644 versus 1.301 ms; comparison 32.114 versus 1.302 ms; 10,000-row expanded compaction 76.475 versus 12.732 ms.</desc>
+<rect x="1" y="1" width="718" height="418" rx="22" fill="#151729" stroke="#373951"/>
+<g font-family="system-ui, Segoe UI, Arial, sans-serif">
+<text x="24" y="40" font-size="25" fill="#f4f3fd" font-weight="700" text-anchor="start">Rust vs. Python on the same reports</text>
+<text x="24" y="66" font-size="16" fill="#c5c7d9" font-weight="400" text-anchor="start">Median wall time (ms) · lower is better · Linux x86-64</text>
+<rect x="26" y="83" width="15" height="15" fill="#a1addc" rx="3"/>
+<text x="49" y="96" font-size="15" fill="#c5c7d9" font-weight="400" text-anchor="start">Python reference</text>
+<rect x="198" y="83" width="15" height="15" fill="#ca9df9" rx="3"/>
+<text x="221" y="96" font-size="15" fill="#c5c7d9" font-weight="400" text-anchor="start">Rust</text>
+<path d="M27 117V354" stroke="#363950"/><text x="27" y="376" font-size="13" fill="#c5c7d9" font-weight="400" text-anchor="middle">0</text>
+<path d="M185.6 117V354" stroke="#363950"/><text x="185.6" y="376" font-size="13" fill="#c5c7d9" font-weight="400" text-anchor="middle">20</text>
+<path d="M344.2 117V354" stroke="#363950"/><text x="344.2" y="376" font-size="13" fill="#c5c7d9" font-weight="400" text-anchor="middle">40</text>
+<path d="M502.79999999999995 117V354" stroke="#363950"/><text x="502.79999999999995" y="376" font-size="13" fill="#c5c7d9" font-weight="400" text-anchor="middle">60</text>
+<path d="M661.4 117V354" stroke="#363950"/><text x="661.4" y="376" font-size="13" fill="#c5c7d9" font-weight="400" text-anchor="middle">80</text>
+<text x="26" y="131" font-size="17" fill="#f4f3fd" font-weight="700" text-anchor="start">Compact: 2 executed tests</text><rect x="27" y="140" width="243.00691999999998" height="15" fill="#a1addc" rx="3"/><text x="279.00692" y="153" font-size="14" fill="#f4f3fd" font-weight="400" text-anchor="start">30.6</text><rect x="27" y="161" width="10.31693" height="15" fill="#ca9df9" rx="3"/><text x="46.31693" y="174" font-size="14" fill="#f4f3fd" font-weight="400" text-anchor="start">1.3</text><text x="693" y="131" font-size="17" fill="#d8b3ff" font-weight="700" text-anchor="end">23.6×</text>
+<text x="26" y="211" font-size="17" fill="#f4f3fd" font-weight="700" text-anchor="start">Compare: 2 executed tests per report</text><rect x="27" y="220" width="254.66401999999997" height="15" fill="#a1addc" rx="3"/><text x="290.66401999999994" y="233" font-size="14" fill="#f4f3fd" font-weight="400" text-anchor="start">32.1</text><rect x="27" y="241" width="10.32486" height="15" fill="#ca9df9" rx="3"/><text x="46.32486" y="254" font-size="14" fill="#f4f3fd" font-weight="400" text-anchor="start">1.3</text><text x="693" y="211" font-size="17" fill="#d8b3ff" font-weight="700" text-anchor="end">24.7×</text>
+<text x="26" y="291" font-size="17" fill="#f4f3fd" font-weight="700" text-anchor="start">Compact: 10,000 expanded rows</text><rect x="27" y="300" width="606.44675" height="15" fill="#a1addc" rx="3"/><text x="642.44675" y="313" font-size="14" fill="#f4f3fd" font-weight="400" text-anchor="start">76.5</text><rect x="27" y="321" width="100.96475999999998" height="15" fill="#ca9df9" rx="3"/><text x="136.96475999999998" y="334" font-size="14" fill="#f4f3fd" font-weight="400" text-anchor="start">12.7</text><text x="693" y="291" font-size="17" fill="#d8b3ff" font-weight="700" text-anchor="end">6.0×</text>
+<text x="26" y="402" font-size="13" fill="#c5c7d9" font-weight="400" text-anchor="start">80 measured calls per engine and workload · includes launch and I/O · excludes Bun execution</text>
 </g></svg>
