@@ -1,0 +1,19 @@
+{
+  "platform": "Windows x64",
+  "bun": "1.4.5",
+  "source": "Public fixture; output from running review-delta.ps1",
+  "cases": {
+    "filtered": {
+      "output": "STOP: reports are not comparable.",
+      "exit": 2
+    },
+    "verified": {
+      "output": "{\"verdict\":\"evidence-ready\",\"matchedTests\":2,\"fixes\":1}",
+      "exit": 0
+    },
+    "still_failing": {
+      "output": "STOP: candidate still has failing tests.",
+      "exit": 1
+    }
+  }
+}

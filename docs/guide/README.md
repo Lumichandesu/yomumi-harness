@@ -11,6 +11,8 @@ Start with the decision you need to make, not a list of flags. A runner status, 
 6. [Fork and adapt](06-fork-and-adapt.md): map a new use case to the files and tests you need.
 7. [Verification](07-verification.md): know what each test layer proves and what it doesn't.
 
+8. [Integrate locally](08-integrate.md): use evidence in a real review check without conflating matching and passing.
+
 ## Decision map
 
 ~~~mermaid

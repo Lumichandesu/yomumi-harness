@@ -9,6 +9,7 @@
   <a href="#try-it">Try it</a> ·
   <a href="#results-at-a-glance">Results</a> ·
   <a href="#install">Install</a> ·
+  <a href="#use-it-in-your-project">Use in a project</a> ·
   <a href="docs/guide/README.md">Field guide</a> ·
   <a href="AGENT-START.md">Agent entry point</a>
 </p>
@@ -95,6 +96,12 @@ This is a source install, not a registry or package-manager release. Cargo may d
 
 ## Use it in your project
 
+| Start with… | Run… | Get… |
+| --- | --- | --- |
+| One Bun report and expected test files | `compact` | A scoped verdict and top failure clusters. |
+| Two reports from the same selection | `compare` | A before/after delta or a clear stop when the results cannot be compared. |
+| A matched delta, but a team-specific rule | [Local review example](docs/guide/08-integrate.md) | An explicit decision without changing the runner or auto-merging a branch. |
+
 **Check a real project run.** Run Bun from your project root and record its actual exit before another command overwrites it:
 
 ~~~sh
@@ -123,6 +130,7 @@ target/release/yomumi-evidence compare before.xml after.xml --before-exit 1 --af
 | Reproduce a number or check its limitations | [Measurement and evidence ledger](docs/guide/03-measurement.md) |
 | Fix an unverified result without hiding the problem | [Reference and recovery](docs/guide/04-reference.md) |
 | See exactly what each test layer proves | [Verification guide](docs/guide/07-verification.md) |
+| Wire the JSON into an existing review script | [Integration recipes](docs/guide/08-integrate.md) |
 | Fork for a monorepo, a review gate, or a different runner | [Fork and adapt](docs/guide/06-fork-and-adapt.md) |
 | Change the CLI or add a fixture | [Contributor checklist](CONTRIBUTING.md) |
 
