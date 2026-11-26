@@ -1,0 +1,34 @@
+{
+  "environment": "Windows x64",
+  "bun": "1.4.5",
+  "engine": "rust",
+  "scope": "Public example fixture only",
+  "runner_exits": {
+    "baseline": 1,
+    "candidate": 0,
+    "filtered_candidate": 0
+  },
+  "observed": {
+    "matched": {
+      "exit": 0,
+      "verdict": "matched",
+      "tests": 2,
+      "before_failed": 1,
+      "after_failed": 0,
+      "changes": [
+        "fixed"
+      ]
+    },
+    "filtered": {
+      "exit": 2,
+      "verdict": "incomplete"
+    },
+    "wrong_scope": {
+      "exit": 2,
+      "verdict": "unverified",
+      "problems": [
+        "file_coverage_mismatch"
+      ]
+    }
+  }
+}

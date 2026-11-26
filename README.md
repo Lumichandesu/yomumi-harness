@@ -6,10 +6,25 @@
 <p align="center"><strong>Compact evidence from Bun test runs, without handing an agent the raw log.</strong></p>
 <p align="center">
   <a href="#quick-start">Quick start</a> ·
+  <a href="docs/guide/README.md">Field guide</a> ·
+  <a href="#choose-a-workflow">Workflows</a> ·
   <a href="#results">Results</a> ·
   <a href="#how-it-compares">Comparison</a> ·
   <a href="AGENT-START.md">Agent quick reference</a>
 </p>
+
+## Start here
+
+Already have Bun and Rust? Run this from the checkout:
+
+~~~sh
+cargo build --release --locked
+python example_smoke.py
+~~~
+
+The example requires Python to drive the demo; the Rust CLI itself does not. Expect **two matched tests, one fix, and a wrong-scope result of `unverified`**. [Follow the full walkthrough](docs/guide/01-first-run.md) to see what the CLI does when a test disappears but Bun still exits successfully.
+
+[For people: field guide](docs/guide/README.md) · [For agents: short entry point](AGENT-START.md) · [For maintainers: verification checklist](CONTRIBUTING.md)
 
 ## Why we built it
 
@@ -19,7 +34,7 @@ We open-sourced only the Bun test-evidence layer. The Yomumi application, privat
 
 | What we built | Why it matters |
 | --- | --- |
-| `compact`: verify declared counts, runner exit, and the expected file set; group failures and bound the output. | A truncated report or wrong file set cannot produce a scoped pass. An unscoped summary makes no pass claim. |
+| `compact`: verify declared counts, runner exit, and the expected file set; group failures and bound the output. | Invalid XML, inconsistent counts, or a wrong file set cannot produce a scoped pass. An unscoped summary makes no pass claim. |
 | `compare`: require the same observed test identities and execution counts before reporting fixes, regressions, or changed failures. | Fewer failures are not counted as an improvement if a test disappears or a duplicate result makes the change ambiguous. |
 | Local Rust CLI with an explicit Python reference. | Reading reports doesn't need an API, cloud upload, or Python at runtime. The reference gives us a second implementation to check the migration against. |
 
@@ -44,12 +59,32 @@ target/release/yomumi-evidence compare before.xml after.xml --before-exit 1 --af
 
 A `matched` verdict means the observed runs can be compared. It does **not** mean there are no regressions. Read `changeCount` and `changes`; the list shows at most 12 changes.
 
+## Choose a workflow
+
+| What you want to know | Start here | What to keep |
+| --- | --- | --- |
+| Did this invocation run the right files? | [Check one report](docs/guide/02-review-recipes.md#check-one-run) | JSON verdict, actual Bun exit, and intended paths. |
+| Did this patch fix a test or just run fewer tests? | [Compare a change](docs/guide/02-review-recipes.md#review-a-change) | Before/after exits, matching selection, and the delta. |
+| Is a new engine faster without dropping work? | [Check a performance claim](docs/guide/03-measurement.md) | Parity result, timed workload, sample count, and latency distribution. |
+| Why did the CLI refuse to compare? | [Troubleshoot the verdict](docs/guide/04-reference.md#troubleshooting) | The first missing fact, not a new run with weaker checks. |
+
+~~~mermaid
+flowchart LR
+    A["Bun report + actual exit + intended paths"] --> B["Compact and check one run"]
+    B -->|Missing or inconsistent evidence| C["Unverified: check the input"]
+    B -->|Scoped result| D["Pass or fail for this run"]
+    E["Two reports + both actual exits"] --> F["Compare observed tests"]
+    F -->|Tests disappeared or evidence is ambiguous| G["Incomplete: no improvement claim"]
+    F -->|Matched| H["Inspect fixes, regressions, and changed failures"]
+~~~
+
 ## Cases we contribute
 
 | Public case | What it demonstrates |
 | --- | --- |
 | [Order quantity and empty cart](examples/fixture.test.ts) | Two actual Bun executions with controlled inputs. One assertion fails on the baseline; the same two tests pass on the candidate. The delta reports one fix. |
 | [Wrong file scope](example_smoke.py) | The candidate report still says zero failures. Changing the expected file alone correctly flips the verdict to `unverified`. |
+| [Green run with a missing test](docs/guide/01-first-run.md#case-2-a-green-run-that-ran-less) | Both candidate invocations exit 0, but filtering out a test makes the delta `incomplete`. |
 | [Parity and negative cases](parity.py) | The Rust CLI is checked against the Python reference on real Bun reports, generated Unicode cases, malformed reports, skips, invalid paths, and ambiguous duplicates. |
 
 These are shareable reproductions of the kinds of review Yomumi needs, not copies of customer data or claims about production coverage.
@@ -79,12 +114,15 @@ python parity.py --bench
 
 The smoke example defaults to Rust. `python example_smoke.py --engine python` explicitly selects the fallback. Existing Python CLI commands remain available; there is no silent fallback on a failed or unverified run.
 
+For a claim-by-claim map from docs to checks, see [Evidence ledger](docs/guide/03-measurement.md#evidence-ledger).
+
 ## How it compares
 
 | Pick this when you need… | Tool |
 | --- | --- |
 | A full machine-readable report to feed into another tool. | [Bun’s JUnit reporter](https://bun.sh/docs/test/reporters) generates the input we read. |
 | Failure annotations on PRs and GitHub job summaries. | [mikepenz/action-junit-report](https://github.com/mikepenz/action-junit-report) and [dorny/test-reporter](https://github.com/dorny/test-reporter) are designed for GitHub checks and team visibility. |
+| A broader playbook suite for an agent’s engineering workflow. | [Lauren “poteto” Tan’s pstack](https://github.com/cursor/plugins/tree/main/pstack) routes and verifies whole tasks; it is a different layer. |
 | A compact local handoff that checks the intended Bun file set and refuses unmatched before/after evidence. | **Yomumi Harness** adds that check and delta without requiring GitHub or uploading the report. |
 
 Use the Harness alongside CI reporters, not in place of them. We measured Rust against our own Python implementation, not against those tools. This project is Bun-specific and does not create GitHub checks or claim full test coverage.
@@ -93,6 +131,7 @@ Use the Harness alongside CI reporters, not in place of them. We measured Rust a
 
 - [Bun](https://bun.sh/docs/test/reporters) provides the JUnit format and runner. We consume its reports; we don't fork the runner.
 - [roxmltree](https://github.com/RazrFalcon/roxmltree) parses XML, [serde_json](https://github.com/serde-rs/json) writes JSON, and [RustCrypto SHA-2](https://github.com/RustCrypto/hashes/tree/master/sha2) computes fingerprints. Resolved dependency versions are in [Cargo.lock](Cargo.lock).
+- [pstack’s guide](https://github.com/cursor/plugins/tree/main/pstack/docs/guide) inspired the short entry point, task recipes, and separation of verification from the write-up. No pstack skills or code are bundled.
 - The two GitHub reporters above are comparison references, not dependencies. The scope checks, compact schema, matched-test delta, and fixtures live here.
 
 ## Sharing and scope

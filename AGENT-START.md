@@ -1,6 +1,9 @@
 # First read for agents
 
-- Use the local Rust `yomumi-evidence` binary (`.exe` on Windows), built with `cargo build --release --locked`.
-- Summarize with `yomumi-evidence compact REPORT --bun-exit EXIT --expect-file FILE`. Treat `unverified` or an absent verdict as incomplete.
-- Compare with `yomumi-evidence compare BEFORE AFTER --before-exit EXIT --after-exit EXIT`. A matched verdict alone is not a pass.
-- Prefer compact JSON. Don't send raw reports to a provider. Python scripts are an explicit fallback; never silently retry a failed or unverified run with a different engine.
+| Need | Route |
+| --- | --- |
+| Check a single Bun run | `yomumi-evidence compact REPORT --bun-exit EXIT --expect-file FILE` |
+| Check what changed | `yomumi-evidence compare BEFORE AFTER --before-exit EXIT --after-exit EXIT` |
+| Need an example or stuck on a verdict | [Field guide](docs/guide/README.md) |
+
+Build with `cargo build --release --locked`; use the binary in `target/release/` (with `.exe` on Windows). Capture exits from the actual invocations. Never turn `unverified`, `incomplete`, or a missing verdict into a pass. `matched` only means comparable: inspect the change list. Don't send raw reports to a provider. No automatic engine fallback.
