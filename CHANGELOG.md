@@ -8,6 +8,7 @@
 - Reports from a runner that discards retry history cannot be checked for retries from XML alone. See [Retry limitations](docs/guide/04-reference.md#retries).
 
 ### Added
+- Rust `compare --diagnostics` adds a fixed reason code to incomplete comparisons without exposing report paths or changing default output.
 - Built-in help for `compact` and `compare`, including scope inputs and exit meanings. Normal invocations still return JSON.
 
 - [No-Bun replay](examples/replay/README.md), [local review integration](docs/guide/08-integrate.md), and [examples where the failure total doesn't move](docs/guide/09-equal-counts.md).

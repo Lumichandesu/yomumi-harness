@@ -10,6 +10,21 @@
 
 **Comparison:** Test identity includes file, class, name, and line as emitted in the reports. It refuses ambiguous changes in duplicate identities, skip cases, inconsistent counts or exits, and differences in observed identities. Moving a test so that its recorded line changes can also make the pair incomparable. This is conservative by design.
 
+## Explain an incomplete comparison
+
+Put `--diagnostics` before the report paths in the Rust CLI. On exit 2, `reason` contains the first blocker detected. No raw path, test name, or report text is added. Successful output and default JSON are unchanged. The Python fallback does not implement this flag.
+
+| Reason | What to check |
+| --- | --- |
+| `invalid_arguments` | Check argument order and supply both actual Bun exits. |
+| `before_report_unavailable` / `after_report_unavailable` | Check that the file can be read and its size is between 1 byte and 8 MiB. |
+| `before_report_invalid` / `after_report_invalid` | Check that the file is genuine, complete Bun JUnit XML with valid case metadata and counts, and no explicit retry markers. |
+| `before_file_scope_invalid` / `after_file_scope_invalid` | Check that the comparison covers no more than 256 files and uses valid relative paths. |
+| `before_skipped_tests` / `after_skipped_tests` | Rerun the same selection without filters or skips. |
+| `before_bun_exit_disagrees` / `after_bun_exit_disagrees` | Check the exit captured immediately from Bun for that report. |
+| `test_identity_mismatch` | Check test selection, recorded line numbers, and counts of repeated identities. |
+| `ambiguous_test_identity` | Give duplicate cases distinct identities before comparing their changed outcomes. |
+
 ## Retries
 
 Reports that explicitly include Bun's `flakyFailure` or `rerunFailure` markers are not accepted as clean evidence. Compact and compare return exit 2. For a first-attempt result, rerun without retries and investigate the original failure.

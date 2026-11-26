@@ -339,22 +339,42 @@ fn compact(
     Ok((result, code))
 }
 
-fn compare(a: &[u8], b: &[u8], ea: i32, eb: i32) -> Checked<(Value, i32)> {
-    let a_report = parse(a, true)?;
-    let b_report = parse(b, true)?;
+type Compared<T> = Result<T, &'static str>;
+
+fn compare(a: &[u8], b: &[u8], ea: i32, eb: i32) -> Compared<(Value, i32)> {
+    let a_report = parse(a, true).map_err(|_| "before_report_invalid")?;
+    let b_report = parse(b, true).map_err(|_| "after_report_invalid")?;
     let af = a_report.counts.errors + a_report.counts.failures;
     let bf = b_report.counts.errors + b_report.counts.failures;
-    for (r, failed, exit) in [(&a_report, af, ea), (&b_report, bf, eb)] {
-        if r.unknown > 0
-            || r.files.len() > 256
-            || r.counts.skipped > 0
-            || exit != i32::from(failed > 0)
-        {
-            return Err(());
+    let check = |r: &Report, failed, exit, reasons: [&'static str; 3]| {
+        if r.unknown > 0 || r.files.len() > 256 {
+            Err(reasons[0])
+        } else if r.counts.skipped > 0 {
+            Err(reasons[1])
+        } else if exit != i32::from(failed > 0) {
+            Err(reasons[2])
+        } else {
+            Ok(())
         }
-    }
+    };
+    check(
+        &a_report, af, ea,
+        [
+            "before_file_scope_invalid",
+            "before_skipped_tests",
+            "before_bun_exit_disagrees",
+        ],
+    )?;
+    check(
+        &b_report, bf, eb,
+        [
+            "after_file_scope_invalid",
+            "after_skipped_tests",
+            "after_bun_exit_disagrees",
+        ],
+    )?;
     if !a_report.cases.keys().eq(b_report.cases.keys()) {
-        return Err(());
+        return Err("test_identity_mismatch");
     }
     let mut changes = Vec::new();
     let mut num = 0;
@@ -362,7 +382,7 @@ fn compare(a: &[u8], b: &[u8], ea: i32, eb: i32) -> Checked<(Value, i32)> {
         let x = &a_report.cases[k];
         let y = &b_report.cases[k];
         if x.len() != y.len() {
-            return Err(());
+            return Err("test_identity_mismatch");
         }
         if x.len() > 1 {
             let mut sx = x.iter().collect::<Vec<_>>();
@@ -370,7 +390,7 @@ fn compare(a: &[u8], b: &[u8], ea: i32, eb: i32) -> Checked<(Value, i32)> {
             sx.sort_unstable();
             sy.sort_unstable();
             if sx != sy {
-                return Err(());
+                return Err("ambiguous_test_identity");
             }
         } else if x[0] != y[0] {
             num += 1;
@@ -406,25 +426,36 @@ fn run(mut args: impl Iterator<Item = String>, mode: &str) -> Checked<(Value, i3
             }
         }
         compact(&bounded(&first)?, limit, files, exit, &expect)
-    } else if mode == "compare" {
-        let second = args.next().ok_or(())?;
-        let (mut ea, mut eb) = (None, None);
-        while let Some(arg) = args.next() {
-            match arg.as_str() {
-                "--before-exit" => ea = Some(args.next().ok_or(())?.parse().map_err(|_| ())?),
-                "--after-exit" => eb = Some(args.next().ok_or(())?.parse().map_err(|_| ())?),
-                _ => return Err(()),
-            }
-        }
-        compare(
-            &bounded(&first)?,
-            &bounded(&second)?,
-            ea.ok_or(())?,
-            eb.ok_or(())?,
-        )
     } else {
         Err(())
     }
+}
+
+fn run_compare(mut args: impl Iterator<Item = String>) -> Compared<(Value, i32)> {
+    let first = args.next().ok_or("invalid_arguments")?;
+    let second = args.next().ok_or("invalid_arguments")?;
+    let (mut ea, mut eb) = (None, None);
+    while let Some(arg) = args.next() {
+        let dest = match arg.as_str() {
+            "--before-exit" => &mut ea,
+            "--after-exit" => &mut eb,
+            _ => return Err("invalid_arguments"),
+        };
+        *dest = Some(
+            args.next()
+                .ok_or("invalid_arguments")?
+                .parse()
+                .map_err(|_| "invalid_arguments")?,
+        );
+    }
+    let ea = ea.ok_or("invalid_arguments")?;
+    let eb = eb.ok_or("invalid_arguments")?;
+    compare(
+        &bounded(&first).map_err(|_| "before_report_unavailable")?,
+        &bounded(&second).map_err(|_| "after_report_unavailable")?,
+        ea,
+        eb,
+    )
 }
 
 fn main() {
@@ -453,32 +484,31 @@ fn main() {
                 return;
             }
             "compare" => {
-                println!("Usage: yomumi-evidence compare BEFORE AFTER --before-exit EXIT --after-exit EXIT\n\nCapture actual Bun exits immediately. Use the same test selection in both runs.\nExit 0 means reports are comparable, not that the candidate passed.\nInspect afterFailed, changeCount, and changes. Exit 2 means incomplete or invalid.");
+                println!("Usage: yomumi-evidence compare [--diagnostics] BEFORE AFTER --before-exit EXIT --after-exit EXIT\n\nCapture actual Bun exits immediately. Use the same test selection in both runs.\nExit 0 means reports are comparable, not that the candidate passed.\nInspect afterFailed, changeCount, and changes. Exit 2 means incomplete or invalid.\nPut --diagnostics before BEFORE to add a fixed reason code on exit 2.");
                 return;
             }
             _ => {}
         }
     }
-    match run(args, &mode) {
-        Ok((output, exit)) => {
-            println!("{output}");
-            std::process::exit(exit);
+    let (output, exit) = if mode == "compare" {
+        let diagnostics = args.as_slice().first().is_some_and(|arg| arg == "--diagnostics");
+        if diagnostics {
+            args.next();
         }
-        Err(()) => {
-            if mode == "compare" {
-                println!(
-                    "{}",
-                    json!({"schemaVersion":1,"kind":"yomumi.matched-test-delta","verdict":"incomplete"})
-                );
-            } else {
-                println!(
-                    "{}",
-                    json!({"status":"unverified","reason":"missing_invalid_or_incomplete_bun_junit"})
-                );
+        run_compare(args).unwrap_or_else(|reason| {
+            let mut output = json!({"schemaVersion":1,"kind":"yomumi.matched-test-delta","verdict":"incomplete"});
+            if diagnostics {
+                output["reason"] = json!(reason);
             }
-            std::process::exit(2);
-        }
-    }
+            (output, 2)
+        })
+    } else {
+        run(args, &mode).unwrap_or_else(|()| {
+            (json!({"status":"unverified","reason":"missing_invalid_or_incomplete_bun_junit"}), 2)
+        })
+    };
+    println!("{output}");
+    std::process::exit(exit);
 }
 
 #[cfg(test)]

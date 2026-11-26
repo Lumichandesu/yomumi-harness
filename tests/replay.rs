@@ -112,3 +112,44 @@ fn compact_help_distinguishes_scoped_failure_and_incomplete() {
     assert!(help.contains("1 scoped failure"));
     assert!(help.contains("2 unverified"));
 }
+#[test]
+fn compare_diagnostics_point_to_the_problem_without_echoing_paths() {
+    let before = report("before.xml");
+    let clean = report("after.xml");
+    let filtered = report("filtered.xml");
+    let scope = |after: &str, exit: &str| run(&[
+        "compare", "--diagnostics", before.to_str().unwrap(), after,
+        "--before-exit", "1", "--after-exit", exit,
+    ]);
+    let (code, value) = scope(filtered.to_str().unwrap(), "0");
+    assert_eq!(code, 2);
+    assert_eq!(value["verdict"], "incomplete");
+    assert_eq!(value["reason"], "after_skipped_tests");
+    let (code, value) = scope(clean.to_str().unwrap(), "1");
+    assert_eq!(code, 2);
+    assert_eq!(value["reason"], "after_bun_exit_disagrees");
+    let (code, value) = scope("private-missing-report.xml", "0");
+    assert_eq!(code, 2);
+    assert_eq!(value["reason"], "after_report_unavailable");
+    assert!(!value.to_string().contains("private-missing"));
+    let (code, value) = scope(clean.to_str().unwrap(), "0");
+    assert_eq!(code, 0);
+    assert_eq!(value["verdict"], "matched");
+    assert!(value.get("reason").is_none());
+    assert!(compare("filtered.xml").1.get("reason").is_none());
+}
+
+#[test]
+fn compare_diagnostics_distinguish_bad_args_from_changed_test_identity() {
+    let (code, value) = run(&["compare", "--diagnostics"]);
+    assert_eq!(code, 2);
+    assert_eq!(value["reason"], "invalid_arguments");
+    let before = report("before.xml");
+    let other = report("baseline.xml");
+    let (code, value) = run(&[
+        "compare", "--diagnostics", before.to_str().unwrap(), other.to_str().unwrap(),
+        "--before-exit", "1", "--after-exit", "1",
+    ]);
+    assert_eq!(code, 2);
+    assert_eq!(value["reason"], "test_identity_mismatch");
+}

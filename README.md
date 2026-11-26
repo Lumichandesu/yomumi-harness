@@ -114,6 +114,8 @@ target/release/yomumi-evidence compare before.xml after.xml --before-exit 1 --af
 
 `matched` means comparable, **not** passed or safe to merge. Read the change labels. See [all exit codes and troubleshooting](docs/guide/04-reference.md).
 
+When a comparison is incomplete, use `yomumi-evidence compare --diagnostics BEFORE AFTER --before-exit EXIT --after-exit EXIT` for a stable reason such as `after_skipped_tests`. The flag does not change verdicts, exit codes, or successful output.
+
 [Changelog](CHANGELOG.md) · [Report format and retry limitations](docs/guide/04-reference.md#retries)
 
 ## Choose your workflow
