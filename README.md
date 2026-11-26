@@ -23,6 +23,16 @@ python compare_bun_runs.py before.xml after.xml --before-exit 1 --after-exit 0
 
 The comparison requires the same observed test identities and counts, no skips, and consistent exit codes. Its exit status indicates whether the comparison was possible, not whether it found a regression. Check `changeCount` and the change labels; the visible list is capped at 12.
 
+## Reproduce the example
+
+With Python and Bun on your PATH, run from this repository:
+
+~~~sh
+python example_smoke.py
+~~~
+
+The same two tests run twice against controlled fixture inputs. The first run has one intentional failure; the second passes. The script verifies that the comparison finds exactly one fix, then confirms that specifying the wrong expected file produces `unverified`. It reports byte counts for this fixture, not token or production performance estimates. It uses temporary reports and makes no model or API calls.
+
 ## Privacy and verification
 
 Run locally. Raw assertion text, test names, and logs are not emitted. Summaries can still include project-relative file paths and deterministic hashes derived from reports or assertions; review them before sharing. Never publish raw reports or treat hashes as anonymization. Matching summaries do not prove that the runs came from the same source, full intended test scope, or equivalent environments. Keep the invocation, revision, environment, and original reports with your local evidence.
