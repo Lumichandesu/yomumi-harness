@@ -401,8 +401,21 @@ fn compare(a: &[u8], b: &[u8], ea: i32, eb: i32, summary_only: bool) -> Compared
                 (2, "changed_failure")
             };
             totals[idx] += 1;
-            if !summary_only && changes.len() < 12 {
-                changes.push(json!({"file":k[0],"testId":&sha(k.join("\0"))[..16],"change":label}));
+            if !summary_only {
+                // Keep report order among retained rows. A late regression can evict
+                // the last non-regression, but never an earlier regression.
+                let include = if changes.len() < 12 {
+                    true
+                } else if idx == 1 {
+                    changes.iter().rposition(|row: &Value| row["change"] != "regression")
+                        .map(|last| changes.remove(last))
+                        .is_some()
+                } else {
+                    false
+                };
+                if include {
+                    changes.push(json!({"file":k[0],"testId":&sha(k.join("\0"))[..16],"change":label}));
+                }
             }
         }
     }
@@ -546,4 +559,28 @@ mod retry_tests {
         }
         assert!(compact(&report(""), 6, false, Some(0), &expected).is_ok());
     }
+}
+#[test]
+fn late_regression_survives_the_detail_cap() {
+    let xml = |after: bool| {
+        let failures = if after { 2 } else { 14 };
+        let mut body = format!(r#"<testsuites name="bun test" tests="15" failures="{failures}" skipped="0"><testsuite>"#);
+        for i in 0..15 {
+            let result = match (i, after) {
+                (0..=12, false) | (13, true) => r#"<failure message="broken"/>"#,
+                (14, false) => r#"<failure message="earlier"/>"#,
+                (14, true) => r#"<failure message="later"/>"#,
+                _ => "",
+            };
+            body.push_str(&format!(r#"<testcase name="case {i}" file="test.ts">{result}</testcase>"#));
+        }
+        body.push_str("</testsuite></testsuites>");
+        body
+    };
+    let (out, code) = compare(xml(false).as_bytes(), xml(true).as_bytes(), 1, 1, false).unwrap();
+    assert_eq!(code, 0);
+    assert_eq!(out["changeCount"], 15);
+    let rows = out["changes"].as_array().unwrap();
+    assert_eq!(rows.len(), 12);
+    assert_eq!(rows.iter().filter(|row| row["change"] == "regression").count(), 1);
 }

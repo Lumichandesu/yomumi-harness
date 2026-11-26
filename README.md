@@ -33,7 +33,7 @@ Expect `matched`, two tests, and one `fixed` change. [Replay all three saved rep
 | Question | What we observed | Where to verify |
 | --- | --- | --- |
 | **Faster to process?** | **30.644 → 1.301 ms** median to compact a real Bun report, about **23.6×** vs. our Python reference. | [Linux data](docs/evidence/linux-latency.csv) · [Speed and methodology](#measured-speed) |
-| **Same behavior?** | **284/284** Rust/Python comparisons matched in parsed JSON and exit code on the Linux test suite. | [Parity runner](parity.py) · [Evidence ledger](docs/guide/03-measurement.md#evidence-ledger) |
+| **Same behavior?** | **284/284** historical Rust/Python comparisons matched in parsed JSON and exit code on the Linux test suite. | [Historical parity runner](https://github.com/Lumichandesu/yomumi-harness/blob/4c66227afdeaaab038c8121f130d5c28c8caf5ac/parity.py) · [Evidence ledger](docs/guide/03-measurement.md#evidence-ledger) |
 | **Does it catch false green?** | On Windows, a filtered Bun run exited **0**, but Harness returned **`incomplete`** because one of the two tests was skipped. | [Windows replay](docs/evidence/guide-replay-windows.json) · [Repeat the case](docs/guide/01-first-run.md#case-2-a-green-run-that-ran-less) |
 | **Fewer payload tokens?** | **266 → 159** on the first-run fixture; **4,794 → 157** on the repeated-failure fixture. | [Token method and replay](docs/guide/05-token-budget.md) |
 | **Fewer bytes?** | **880 → 513 bytes** on one fixture (**41.7%** smaller). This is not a token measurement. | [Windows smoke output](docs/evidence/windows-smoke.json) |
@@ -116,7 +116,7 @@ target/release/yomumi-evidence compare before.xml after.xml --before-exit 1 --af
 
 When a comparison is incomplete, use `yomumi-evidence compare --diagnostics BEFORE AFTER --before-exit EXIT --after-exit EXIT` for a stable reason such as `after_skipped_tests`. The flag does not change verdicts, exit codes, or successful output.
 
-For a compact review that still counts every fix, regression, and changed failure, use Rust `compare --summary-only`. See the [15-test case where a regression fell outside the default list](docs/guide/10-bounded-summaries.md).
+For a compact review that still counts every fix, regression, and changed failure, use Rust `compare --summary-only`. See the [15-test case that exposed the regression hidden by the old detail cap](docs/guide/10-bounded-summaries.md).
 
 [Changelog](CHANGELOG.md) · [Report format and retry limitations](docs/guide/04-reference.md#retries)
 
@@ -149,7 +149,7 @@ For a compact review that still counts every fix, regression, and changed failur
 
 - **`compact`** groups failures and checks counts, file scope, and Bun’s exit. It does not turn an unscoped report into a pass.
 - **`compare`** checks observed test identities and execution counts before describing fixes, regressions, and changed failures. This is the layer that catches the filtered-run case.
-- **Rust** is the default executable. The Python implementation remains the reference and explicit fallback (`python example_smoke.py --engine python`). No silent fallback on failed or unverified work.
+- **Rust only** for install, replay, and verification on the current branch. Historical comparator source is pinned in the measurement guide for reproducibility.
 
 ### How it compares
 

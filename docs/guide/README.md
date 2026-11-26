@@ -32,3 +32,5 @@ flowchart LR
 Already know the commands? [Agent quick reference](../../AGENT-START.md). Changing the CLI or evidence rules? [Contributor checklist](../../CONTRIBUTING.md).
 
 This guide borrows the documentation pattern of a short front door and task-oriented pages from [poteto’s pstack guide](https://github.com/cursor/plugins/tree/main/pstack/docs/guide). Yomumi Harness is a local report tool and does not run pstack playbooks.
+
+[Case study: when the 12-row cap hid a new regression](10-bounded-summaries.md)
