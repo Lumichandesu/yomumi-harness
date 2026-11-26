@@ -88,3 +88,27 @@ fn same_failing_test_with_a_different_signal_is_not_a_fix() {
     assert_eq!(delta["changeCount"], 1);
     assert_eq!(delta["changes"][0]["change"], "changed_failure");
 }
+
+#[test]
+fn help_is_explicit_and_explains_compare_exit() {
+    for args in [&["--help"][..], &["compare", "--help"][..]] {
+        let out = Command::new(env!("CARGO_BIN_EXE_yomumi-evidence")).args(args).output().unwrap();
+        assert_eq!(out.status.code(), Some(0));
+        assert!(out.stderr.is_empty());
+        assert!(String::from_utf8(out.stdout).unwrap().contains("0 means reports are comparable"));
+    }
+    let (code, delta) = run(&["compare", "missing.xml", "--help"]);
+    assert_eq!(code, 2);
+    assert_eq!(delta["verdict"], "incomplete");
+}
+
+#[test]
+fn compact_help_distinguishes_scoped_failure_and_incomplete() {
+    let out = Command::new(env!("CARGO_BIN_EXE_yomumi-evidence"))
+        .args(["compact", "--help"]).output().unwrap();
+    assert_eq!(out.status.code(), Some(0));
+    assert!(out.stderr.is_empty());
+    let help = String::from_utf8(out.stdout).unwrap();
+    assert!(help.contains("1 scoped failure"));
+    assert!(help.contains("2 unverified"));
+}

@@ -85,6 +85,8 @@ cargo install --path . --locked
 
 This is a source install, not a registry or package-manager release. Cargo may download the locked dependencies when building for the first time. The installed CLI runs offline and does not require Python or Bun to read an existing report. [Windows source-install smoke](docs/evidence/installed-cli-windows.json).
 
+Run `yomumi-evidence --help`, `yomumi-evidence compact --help`, or `yomumi-evidence compare --help` for built-in command and exit-code help.
+
 ## Use it in your project
 
 | Start with… | Run… | Get… |

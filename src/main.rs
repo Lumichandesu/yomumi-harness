@@ -441,6 +441,24 @@ fn main() {
         std::process::exit(2);
     };
     let mode = args.next().unwrap_or_default();
+    let help_flag = |s: &str| matches!(s, "-h" | "--help");
+    if help_flag(&mode) && args.len() == 0 {
+        println!("yomumi-evidence: verify Bun JUnit test evidence\n\nCommands:\n  compact  Summarize one report and optionally verify its file scope.\n  compare  Find fixes, regressions, and changed failures across matched runs.\n\nUse compact --help or compare --help for usage.\nCompare exit 0 means reports are comparable; it does not certify a pass.");
+        return;
+    }
+    if args.len() == 1 && help_flag(&args.as_slice()[0]) {
+        match mode.as_str() {
+            "compact" => {
+                println!("Usage: yomumi-evidence compact REPORT [--limit N] [--files]\n       [--bun-exit EXIT --expect-file FILE ...]\n\nCapture Bun's actual exit and repeat --expect-file for every intended test file.\n--limit: 1-12 clusters (default 6). --files: include per-file counts.\nScoped exits: 0 scoped pass, 1 scoped failure, 2 unverified or invalid.\nWithout a scope, exit 0 only means a summary was produced.");
+                return;
+            }
+            "compare" => {
+                println!("Usage: yomumi-evidence compare BEFORE AFTER --before-exit EXIT --after-exit EXIT\n\nCapture actual Bun exits immediately. Use the same test selection in both runs.\nExit 0 means reports are comparable, not that the candidate passed.\nInspect afterFailed, changeCount, and changes. Exit 2 means incomplete or invalid.");
+                return;
+            }
+            _ => {}
+        }
+    }
     match run(args, &mode) {
         Ok((output, exit)) => {
             println!("{output}");
