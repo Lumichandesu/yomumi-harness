@@ -562,10 +562,43 @@ impl Drop for ScopedReport {
     }
 }
 
+fn wait_for_bun(
+    mut child: std::process::Child,
+    timeout: std::time::Duration,
+) -> Compared<std::process::ExitStatus> {
+    use std::time::{Duration, Instant};
+
+    let start = Instant::now();
+    let stop = |child: &mut std::process::Child| {
+        if child.kill().is_err() && !matches!(child.try_wait(), Ok(Some(_))) {
+            return Err("bun_stop_failed");
+        }
+        child.wait().map_err(|_| "bun_wait_failed")?;
+        Ok(())
+    };
+
+    loop {
+        let remaining = timeout.saturating_sub(start.elapsed());
+        if remaining.is_zero() {
+            stop(&mut child)?;
+            return Err("bun_timeout");
+        }
+        match child.try_wait() {
+            Ok(Some(status)) => return Ok(status),
+            Ok(None) => std::thread::sleep(remaining.min(Duration::from_millis(20))),
+            Err(_) => {
+                stop(&mut child)?;
+                return Err("bun_wait_failed");
+            }
+        }
+    }
+}
+
 fn run_scoped(mut args: impl Iterator<Item = String>) -> Compared<(Value, i32)> {
     use std::process::{Command, Stdio};
 
     let mut count = None;
+    let mut timeout = None;
     let mut files = Vec::new();
     let mut seen = BTreeSet::new();
     while let Some(flag) = args.next() {
@@ -577,6 +610,13 @@ fn run_scoped(mut args: impl Iterator<Item = String>) -> Compared<(Value, i32)> 
                     return Err("invalid_arguments");
                 }
                 count = Some(n);
+            }
+            "--timeout-seconds" if timeout.is_none() => {
+                let n = count_value(&value).map_err(|_| "invalid_arguments")?;
+                if !(1..=3600).contains(&n) {
+                    return Err("invalid_arguments");
+                }
+                timeout = Some(n as u64);
             }
             "--expect-file" if files.len() < 256 => {
                 let file = relative_file(&value).ok_or("invalid_arguments")?;
@@ -604,7 +644,7 @@ fn run_scoped(mut args: impl Iterator<Item = String>) -> Compared<(Value, i32)> 
     let path = temp.path();
     let mut output = std::ffi::OsString::from("--reporter-outfile=");
     output.push(&path);
-    let exit = Command::new("bun")
+    let child = Command::new("bun")
         .args(["test", "--reporter=junit"])
         .arg(output)
         .args(files.iter().map(|file| format!("./{file}")))
@@ -613,8 +653,10 @@ fn run_scoped(mut args: impl Iterator<Item = String>) -> Compared<(Value, i32)> 
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
-        .status()
-        .map_err(|_| "bun_start_failed")?
+        .spawn()
+        .map_err(|_| "bun_start_failed")?;
+    let timeout = std::time::Duration::from_secs(timeout.unwrap_or(300));
+    let exit = wait_for_bun(child, timeout)?
         .code()
         .ok_or("bun_exit_unavailable")?;
     let bytes = bounded(path).map_err(|_| "bun_report_unavailable")?;
@@ -643,7 +685,7 @@ fn main() {
     if args.len() == 1 && help_flag(&args.as_slice()[0]) {
         match mode.as_str() {
             "run-scoped" => {
-                println!("Usage: yomumi-evidence run-scoped --expect-tests N --expect-file FILE [--expect-file FILE ...]\n\nRun from the project root with Bun on PATH. Supply an exact count from a trusted full run.\nExit 0 scoped pass, 1 scoped failure, 2 unverified or invalid.");
+                println!("Usage: yomumi-evidence run-scoped --expect-tests N --expect-file FILE [--expect-file FILE ...] [--timeout-seconds N]\n\nRun from the project root with Bun on PATH. Supply an exact count from a trusted full run.\nTimeout: 1–3600 seconds, default 300.\nExit 0 scoped pass, 1 scoped failure, 2 unverified or invalid.");
                 return;
             }
             "compact" => {

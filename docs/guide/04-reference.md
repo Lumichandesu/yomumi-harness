@@ -33,7 +33,7 @@ Put `--diagnostics` before the report paths in the Rust CLI. On exit 2, `reason`
 
 ## Run scoped
 
-`run-scoped --expect-tests N --expect-file FILE [--expect-file FILE ...]` runs the local Bun executable from your project root. It requires a positive count and a non-empty list of distinct repository-relative test files. The verifier clears `BUN_OPTIONS`, checks observed paths and count against the supplied values, and emits the same JSON and exit codes as scoped `compact`. It uses a fresh temporary report and keeps standard output reserved for JSON. If you need runner logs or custom options, run Bun yourself and use `compact` with the actual exit and the fresh report.
+`run-scoped --expect-tests N --expect-file FILE [--expect-file FILE ...]` runs the local Bun executable from your project root. It requires a positive count and a non-empty list of distinct repository-relative test files. The verifier clears `BUN_OPTIONS`, checks observed paths and count against the supplied values, and emits the same JSON and exit codes as scoped `compact`. It uses a fresh temporary report and keeps standard output reserved for JSON. The default Bun deadline is 300 seconds. Set `--timeout-seconds N` (1–3600) for a different budget. On expiry the command stops Bun itself, ignores its partial report, and returns exit 2 with `bun_timeout`. Independently spawned subprocesses are not managed by this deadline. If you need runner logs or custom options, run Bun yourself and use `compact` with the actual exit and the fresh report.
 
 ## Focused tests and omitted rows
 

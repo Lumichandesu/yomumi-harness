@@ -42,3 +42,22 @@ fn missing_expected_count_is_rejected_before_running_bun() {
     let json: Value = serde_json::from_slice(&checked.stdout).expect("valid evidence JSON");
     assert_eq!(json["reason"], "invalid_arguments");
 }
+
+#[test]
+#[ignore = "needs a local Bun executable"]
+fn timed_out_bun_returns_unverified_not_a_partial_pass() {
+    let checked = Command::new(env!("CARGO_BIN_EXE_yomumi-evidence"))
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .args([
+            "run-scoped", "--timeout-seconds", "1", "--expect-tests", "2",
+            "--expect-file", "examples/focused-run.test.ts",
+        ])
+        .env("HARNESS_DEMO_FOCUS", "0")
+        .env("HARNESS_DEMO_SLOW", "1")
+        .output()
+        .expect("run Rust verifier");
+    assert_eq!(checked.status.code(), Some(2));
+    let json: Value = serde_json::from_slice(&checked.stdout).expect("valid evidence JSON");
+    assert_eq!(json["reason"], "bun_timeout");
+    assert!(json.get("tests").is_none());
+}

@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- Bound `run-scoped` to a 300-second default Bun deadline. An expired run is unverified and never uses the partial report.
+
 - Reject reports whose declared top-level suite counts disagree with their testcase rows, even when the overall totals match.
 
 - Treat missing or blank testcase names as incomplete evidence in both commands, rather than allowing a scoped pass for unidentifiable rows.
