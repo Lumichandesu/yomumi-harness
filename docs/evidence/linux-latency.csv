@@ -1,0 +1,4 @@
+workload,python_p50_ms,python_p95_ms,rust_p50_ms,rust_p95_ms
+"Compact actual Bun report (2 tests)",30.644,36.601,1.301,1.626
+"Compare actual Bun reports (2 tests each)",32.114,41.805,1.302,1.623
+"Compact expanded fixture (10,000 rows)",76.475,105.21,12.732,16.563

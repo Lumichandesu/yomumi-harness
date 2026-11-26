@@ -1,0 +1,10 @@
+{
+  "test_count": 2,
+  "fixes": 1,
+  "baseline": "scoped-fail",
+  "candidate": "scoped-pass",
+  "wrong_scope": "unverified",
+  "baseline_junit_bytes": 880,
+  "baseline_summary_bytes": 513,
+  "engine": "rust"
+}
