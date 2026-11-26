@@ -35,6 +35,15 @@ Put `--diagnostics` before the report paths in the Rust CLI. On exit 2, `reason`
 
 `run-scoped --expect-tests N --expect-file FILE [--expect-file FILE ...]` runs the local Bun executable from your project root. It requires a positive count and a non-empty list of distinct repository-relative test files. The verifier clears `BUN_OPTIONS`, checks observed paths and count against the supplied values, and emits the same JSON and exit codes as scoped `compact`. It uses a fresh temporary report and keeps standard output reserved for JSON. The default Bun deadline is 300 seconds. Set `--timeout-seconds N` (1–3600) for a different budget. On expiry the command stops Bun itself, ignores its partial report, and returns exit 2 with `bun_timeout`. Independently spawned subprocesses are not managed by this deadline. If you need runner logs or custom options, run Bun yourself and use `compact` with the actual exit and the fresh report.
 
+To require the same tests as a trusted full run, add `--baseline full.xml`. The baseline must have matching files and count and no skipped tests. The verifier checks each observed file, class, name, source line and repeat count. When the identities differ it returns exit 2 with `baseline_test_identity_mismatch`, even if Bun returned 0 and the total count matches. A test move or rename can require a refreshed baseline; verify the full intended run before refreshing it. Baseline failures are not compared here; use `compare` to review failure transitions.
+
+~~~sh
+bun test --reporter=junit --reporter-outfile=full.xml ./tests/example.test.ts
+yomumi-evidence run-scoped --expect-tests 2 --expect-file tests/example.test.ts --baseline full.xml
+~~~
+
+Keep the baseline XML local. In this example `2` is the trusted full-run count.
+
 ## Focused tests and omitted rows
 
 Bun 1.4.5 may omit tests outside a `test.only` selection completely: a real two-case example produced one JUnit row, zero skipped, and exit 0. File coverage alone cannot detect that. Run `compact REPORT --bun-exit EXIT --expect-file FILE --expect-tests N` with an exact count established from a trusted full run. A different count yields exit 2 and `test_count_mismatch`; the flag requires a scoped invocation and a positive count.

@@ -22,6 +22,7 @@
 - Rust is the sole supported CLI and verification path; the old comparator is accessible in Git history for the recorded benchmark.
 
 ### Added
+- `run-scoped --baseline REPORT` requires the same test identities and execution counts as the trusted full Bun JUnit report.
 - `run-scoped` invokes local Bun, captures its exit and a fresh JUnit report, and verifies the explicitly expected files and test count in one Rust command.
 - Scoped `compact --expect-tests N` can reject missing rows (such as a Bun `.only` run) when a trusted full-run count is known.
 - Rust `compare --summary-only` emits complete category counts and report hashes without per-test rows. Default output and exit codes are unchanged.

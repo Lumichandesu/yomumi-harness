@@ -61,3 +61,45 @@ fn timed_out_bun_returns_unverified_not_a_partial_pass() {
     assert_eq!(json["reason"], "bun_timeout");
     assert!(json.get("tests").is_none());
 }
+
+#[test]
+#[ignore = "needs a local Bun executable"]
+fn baseline_catches_replacement_with_the_same_test_count() {
+    use std::{fs, time::{SystemTime, UNIX_EPOCH}};
+    let nonce = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+    let dir = std::env::temp_dir().join(format!("yomumi-baseline-test-{}-{nonce}", std::process::id()));
+    fs::create_dir(&dir).unwrap();
+    let report = dir.join("baseline.xml");
+    struct Cleanup(std::path::PathBuf, std::path::PathBuf);
+    impl Drop for Cleanup {
+        fn drop(&mut self) {
+            let _ = fs::remove_file(&self.0);
+            let _ = fs::remove_dir(&self.1);
+        }
+    }
+    let _cleanup = Cleanup(report.clone(), dir);
+    let fixture = "examples/focused-run.test.ts";
+    let mut outfile = std::ffi::OsString::from("--reporter-outfile=");
+    outfile.push(&report);
+    let baseline = Command::new("bun").current_dir(env!("CARGO_MANIFEST_DIR"))
+        .args(["test", "--reporter=junit", fixture]).arg(outfile)
+        .env_remove("BUN_OPTIONS").env("HARNESS_DEMO_COVERAGE_RENAME", "0")
+        .env("HARNESS_DEMO_FOCUS", "0").env("HARNESS_DEMO_SLOW", "0")
+        .output().unwrap();
+    assert_eq!(baseline.status.code(), Some(0));
+    for (rename, expected) in [("0", 0), ("1", 2)] {
+        let run = Command::new(env!("CARGO_BIN_EXE_yomumi-evidence"))
+            .current_dir(env!("CARGO_MANIFEST_DIR"))
+            .args(["run-scoped", "--expect-tests", "2", "--expect-file", fixture, "--baseline"])
+            .arg(&report).env("HARNESS_DEMO_COVERAGE_RENAME", rename)
+            .env("HARNESS_DEMO_FOCUS", "0").env("HARNESS_DEMO_SLOW", "0")
+            .output().unwrap();
+        let json: Value = serde_json::from_slice(&run.stdout).unwrap();
+        assert_eq!(run.status.code(), Some(expected), "{json}");
+        assert_eq!(json["tests"], 2);
+        assert_eq!(json["bunExit"], 0);
+        if rename == "1" {
+            assert_eq!(json["problems"], serde_json::json!(["baseline_test_identity_mismatch"]));
+        }
+    }
+}

@@ -599,6 +599,7 @@ fn run_scoped(mut args: impl Iterator<Item = String>) -> Compared<(Value, i32)> 
 
     let mut count = None;
     let mut timeout = None;
+    let mut baseline_path = None;
     let mut files = Vec::new();
     let mut seen = BTreeSet::new();
     while let Some(flag) = args.next() {
@@ -611,6 +612,7 @@ fn run_scoped(mut args: impl Iterator<Item = String>) -> Compared<(Value, i32)> 
                 }
                 count = Some(n);
             }
+            "--baseline" if baseline_path.is_none() => baseline_path = Some(value),
             "--timeout-seconds" if timeout.is_none() => {
                 let n = count_value(&value).map_err(|_| "invalid_arguments")?;
                 if !(1..=3600).contains(&n) {
@@ -640,6 +642,19 @@ fn run_scoped(mut args: impl Iterator<Item = String>) -> Compared<(Value, i32)> 
             return Err("expected_file_unavailable");
         }
     }
+    let baseline = if let Some(path) = baseline_path {
+        let bytes = bounded(path).map_err(|_| "baseline_report_unavailable")?;
+        let report = parse(&bytes, true).map_err(|_| "baseline_report_invalid")?;
+        if report.counts.tests != count
+            || report.counts.skipped != 0
+            || !report.files.keys().eq(seen.iter())
+        {
+            return Err("baseline_scope_mismatch");
+        }
+        Some(report.cases)
+    } else {
+        None
+    };
     let temp = ScopedReport::create().map_err(|_| "report_directory_unavailable")?;
     let path = temp.path();
     let mut output = std::ffi::OsString::from("--reporter-outfile=");
@@ -660,7 +675,23 @@ fn run_scoped(mut args: impl Iterator<Item = String>) -> Compared<(Value, i32)> 
         .code()
         .ok_or("bun_exit_unavailable")?;
     let bytes = bounded(path).map_err(|_| "bun_report_unavailable")?;
-    compact(&bytes, 6, false, Some(exit), &files, Some(count)).map_err(|_| "bun_report_invalid")
+    let (mut evidence, mut code) =
+        compact(&bytes, 6, false, Some(exit), &files, Some(count)).map_err(|_| "bun_report_invalid")?;
+    if let Some(expected) = baseline {
+        if code != 2 {
+            let observed = parse(&bytes, true).map_err(|_| "bun_report_invalid")?.cases;
+            let matches = expected
+                .iter()
+                .map(|(key, runs)| (key, runs.len()))
+                .eq(observed.iter().map(|(key, runs)| (key, runs.len())));
+            if !matches {
+                evidence["verdict"] = json!("unverified");
+                evidence["problems"] = json!(["baseline_test_identity_mismatch"]);
+                code = 2;
+            }
+        }
+    }
+    Ok((evidence, code))
 }
 
 fn main() {
@@ -685,7 +716,7 @@ fn main() {
     if args.len() == 1 && help_flag(&args.as_slice()[0]) {
         match mode.as_str() {
             "run-scoped" => {
-                println!("Usage: yomumi-evidence run-scoped --expect-tests N --expect-file FILE [--expect-file FILE ...] [--timeout-seconds N]\n\nRun from the project root with Bun on PATH. Supply an exact count from a trusted full run.\nTimeout: 1–3600 seconds, default 300.\nExit 0 scoped pass, 1 scoped failure, 2 unverified or invalid.");
+                println!("Usage: yomumi-evidence run-scoped --expect-tests N --expect-file FILE [--expect-file FILE ...] [--timeout-seconds N] [--baseline REPORT]\n\nRun from the project root with Bun on PATH. Supply an exact count from a trusted full run.\nTimeout: 1–3600 seconds, default 300.\nOptional baseline: require the same test identities, not only the same count.\nExit 0 scoped pass, 1 scoped failure, 2 unverified or invalid.");
                 return;
             }
             "compact" => {
