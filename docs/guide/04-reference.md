@@ -31,6 +31,12 @@ Put `--diagnostics` before the report paths in the Rust CLI. On exit 2, `reason`
 | `test_identity_mismatch` | Check test selection, recorded line numbers, and counts of repeated identities. |
 | `ambiguous_test_identity` | Give duplicate cases distinct identities before comparing their changed outcomes. |
 
+## Focused tests and omitted rows
+
+Bun 1.4.5 may omit tests outside a `test.only` selection completely: a real two-case example produced one JUnit row, zero skipped, and exit 0. File coverage alone cannot detect that. Run `compact REPORT --bun-exit EXIT --expect-file FILE --expect-tests N` with an exact count established from a trusted full run. A different count yields exit 2 and `test_count_mismatch`; the flag requires a scoped invocation and a positive count.
+
+A count does not verify test identities or detect a replacement with the same count. For matched identities, keep a full baseline and use `compare`. A regular skip or TODO that Bun records as skipped is already rejected in scoped and matched verification.
+
 ## Retries
 
 Reports that explicitly include Bun's `flakyFailure` or `rerunFailure` markers are not accepted as clean evidence. Compact and compare return exit 2. For a first-attempt result, rerun without retries and investigate the original failure.

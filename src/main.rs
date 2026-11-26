@@ -308,8 +308,12 @@ fn compact(
     show_files: bool,
     exit: Option<i32>,
     expected: &[String],
+    expected_tests: Option<usize>,
 ) -> Checked<(Value, i32)> {
     if !(1..=12).contains(&limit) || exit.is_some() == expected.is_empty() || expected.len() > 256 {
+        return Err(());
+    }
+    if expected_tests.is_some_and(|n| n == 0 || exit.is_none()) {
         return Err(());
     }
     let scope: BTreeSet<String> = expected
@@ -350,6 +354,12 @@ fn compact(
         }
         if c.skipped > 0 {
             problems.push("skipped_tests");
+        }
+        if let Some(n) = expected_tests {
+            result["expectedTests"] = json!(n);
+            if n != c.tests {
+                problems.push("test_count_mismatch");
+            }
         }
         let failed = c.failures + c.errors > 0;
         if exit != i32::from(failed) {
@@ -470,12 +480,16 @@ fn run(mut args: impl Iterator<Item = String>, mode: &str) -> Checked<(Value, i3
     let first = args.next().ok_or(())?;
     if mode == "compact" {
         let (mut limit, mut files, mut exit, mut expect) = (6, false, None, Vec::new());
+        let mut expected_tests = None;
         while let Some(arg) = args.next() {
             match arg.as_str() {
                 "--limit" => limit = args.next().ok_or(())?.parse().map_err(|_| ())?,
                 "--files" => files = true,
                 "--bun-exit" if exit.is_none() => {
                     exit = Some(args.next().ok_or(())?.parse().map_err(|_| ())?);
+                }
+                "--expect-tests" if expected_tests.is_none() => {
+                    expected_tests = Some(count_value(&args.next().ok_or(())?)?);
                 }
                 "--expect-file" => {
                     if expect.len() == 256 {
@@ -486,7 +500,7 @@ fn run(mut args: impl Iterator<Item = String>, mode: &str) -> Checked<(Value, i3
                 _ => return Err(()),
             }
         }
-        compact(&bounded(&first)?, limit, files, exit, &expect)
+        compact(&bounded(&first)?, limit, files, exit, &expect, expected_tests)
     } else {
         Err(())
     }
@@ -545,7 +559,7 @@ fn main() {
     if args.len() == 1 && help_flag(&args.as_slice()[0]) {
         match mode.as_str() {
             "compact" => {
-                println!("Usage: yomumi-evidence compact REPORT [--limit N] [--files]\n       [--bun-exit EXIT --expect-file FILE ...]\n\nCapture Bun's actual exit and repeat --expect-file for every intended test file.\n--limit: 1-12 clusters (default 6). --files: include per-file counts.\nScoped exits: 0 scoped pass, 1 scoped failure, 2 unverified or invalid.\nWithout a scope, exit 0 only means a summary was produced.");
+                println!("Usage: yomumi-evidence compact REPORT [--limit N] [--files]\n       [--bun-exit EXIT --expect-file FILE ... [--expect-tests N]]\n\nCapture Bun's actual exit and repeat --expect-file for every intended test file.\nOptionally require an exact test count from a trusted full run.\n--limit: 1-12 clusters (default 6). --files: include per-file counts.\nScoped exits: 0 scoped pass, 1 scoped failure, 2 unverified or invalid.\nWithout a scope, exit 0 only means a summary was produced.");
                 return;
             }
             "compare" => {
@@ -594,10 +608,10 @@ mod retry_tests {
         let expected = ["fixture.test.ts".to_owned()];
         for tag in ["flakyFailure", "rerunFailure"] {
             let data = report(&format!("<{tag} message=\"retry\"/>"));
-            assert!(compact(&data, 6, false, Some(0), &expected).is_err());
+            assert!(compact(&data, 6, false, Some(0), &expected, None).is_err());
             assert!(compare(&report(""), &data, 0, 0, false).is_err());
         }
-        assert!(compact(&report(""), 6, false, Some(0), &expected).is_ok());
+        assert!(compact(&report(""), 6, false, Some(0), &expected, None).is_ok());
     }
 }
 #[test]
@@ -630,7 +644,7 @@ fn blank_case_identity_cannot_verify_a_report() {
     for name in ["", "   "] {
         let xml = format!(r#"<testsuites name="bun test" tests="1" failures="0" skipped="0"><testsuite><testcase name="{name}" file="example.test.ts"/></testsuite></testsuites>"#);
         let scope = ["example.test.ts".to_owned()];
-        assert!(compact(xml.as_bytes(), 6, false, Some(0), &scope).is_err());
+        assert!(compact(xml.as_bytes(), 6, false, Some(0), &scope, None).is_err());
         assert!(compare(xml.as_bytes(), xml.as_bytes(), 0, 0, false).is_err());
     }
 }
@@ -646,7 +660,7 @@ fn declared_suite_totals_must_match_even_if_root_totals_match() {
     let scope = ["alpha.test.ts".to_owned(), "beta.test.ts".to_owned()];
     let good = report("1", "1");
     let bad = report("2", "0");
-    assert_eq!(compact(good.as_bytes(), 6, false, Some(0), &scope).unwrap().1, 0);
-    assert!(compact(bad.as_bytes(), 6, false, Some(0), &scope).is_err());
+    assert_eq!(compact(good.as_bytes(), 6, false, Some(0), &scope, None).unwrap().1, 0);
+    assert!(compact(bad.as_bytes(), 6, false, Some(0), &scope, None).is_err());
     assert!(compare(good.as_bytes(), bad.as_bytes(), 0, 0, false).is_err());
 }

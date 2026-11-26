@@ -20,6 +20,7 @@
 - Rust is the sole supported CLI and verification path; the old comparator is accessible in Git history for the recorded benchmark.
 
 ### Added
+- Scoped `compact --expect-tests N` can reject missing rows (such as a Bun `.only` run) when a trusted full-run count is known.
 - Rust `compare --summary-only` emits complete category counts and report hashes without per-test rows. Default output and exit codes are unchanged.
 - Rust `compare --diagnostics` adds a fixed reason code to incomplete comparisons without exposing report paths or changing default output.
 - Built-in help for `compact` and `compare`, including scope inputs and exit meanings. Normal invocations still return JSON.

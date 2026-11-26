@@ -201,3 +201,19 @@ fn duplicate_compare_exits_cannot_override_observed_exits() {
         assert_eq!(result["reason"], "invalid_arguments");
     }
 }
+
+#[test]
+fn scoped_compact_rejects_a_smaller_observed_count() {
+    let after = report("after.xml");
+    let path = after.to_str().unwrap();
+    let check = |count: &str| run(&["compact", path, "--bun-exit", "0",
+        "--expect-file", "examples/fixture.test.ts", "--expect-tests", count]);
+    assert_eq!(check("2").0, 0);
+    let (code, result) = check("3");
+    assert_eq!(code, 2);
+    assert_eq!(result["problems"][0], "test_count_mismatch");
+    assert_eq!(result["expectedTests"], 3);
+    assert_eq!(result["tests"], 2);
+    assert_eq!(check("0").0, 2);
+    assert_eq!(run(&["compact", path, "--expect-tests", "2"]).0, 2);
+}
