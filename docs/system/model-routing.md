@@ -37,7 +37,7 @@ The first open, allowed agent in the chain wins; the rest become the failover or
 | short | Claude → Codex → Antigravity → Cursor → Hermes | Sonnet |
 | hard | Claude → Codex → Antigravity → Cursor → Hermes | Opus |
 
-Antigravity gets a Gemini model tier per kind (a light Flash tier for search and easy work, a Pro tier for short and hard work). Codex and Cursor use their CLI's default model, because the owner chose to let Codex pick its own model per task. Hermes always picks its own free model.
+Antigravity gets a configured Gemini model per kind: a lighter one for search and easy work, a stronger one for short and hard work. Codex and Cursor use their CLI's default model, because the owner chose to let Codex pick its own model per task. Hermes always picks its own free model.
 
 ## Who does what
 
@@ -45,7 +45,7 @@ The routing table encodes a role list the owner wrote for every agent:
 
 - **Claude Opus**: hard work that is long to write or long to think through: calculation, large implementations, design, security, money, final review.
 - **Claude Sonnet**: hard but short work.
-- **Claude Haiku**: pure searching and lookups. Never code, design or review. Also a good fit for waiting and monitoring jobs, such as watching a long render.
+- **Claude Haiku**: pure searching and lookups. Never code, design or review.
 - **Gemini (Antigravity)**: searching and very easy tasks, reviewed before merge.
 - **Codex**: in the general work pool; chooses its own model.
 - **Hermes**: research and lookups only, read-only, free models only.
@@ -55,12 +55,12 @@ The dispatcher compares its routing table with this role list in the coordinatio
 
 ## How a task is classified
 
-The planner (the calling agent session) should pass `kind` or `weight` itself. A keyword heuristic is only the fallback. Sanitized excerpt:
+The planner (the calling agent session) should pass `kind` or `weight` itself. A keyword heuristic is only the fallback. Simplified excerpt:
 
 ~~~ts
 const SEARCH = /\b(find|search|locate|look ?up|list|where (is|are|do)|grep|which files?|inventory|check whether|is there)\b/i;
 const EASY   = /\b(typo|spelling|readme|docs?|comment|rename|dead code|unused|lint|format|bump|dependency hygiene|wording)\b/i;
-const HEAVY  = /\b(implement|build|refactor|architecture|design|security|auth(entication|orization)?|payment|wallet|ledger|migration|end-to-end|audit|rewrite|redesign|investigate|root cause)\b/i;
+const HEAVY  = /\b(implement|build|refactor|architecture|design|security|auth|payment|migration|end-to-end|audit|rewrite|redesign|investigate|root cause)\b/i;
 
 function classify(prompt, mode, hint) {
   if (hint.kind) return hint.kind === 'search' && mode !== 'read-only' ? 'easy' : hint.kind;
@@ -79,7 +79,7 @@ The heuristic leans toward the heavier side for anything that mentions security,
 These are checks in code, not advice:
 
 - **Haiku never edits.** A Haiku candidate in write mode is skipped, and a `search` task requested in write mode is treated as `easy`.
-- **Hermes never writes** (it has no file sandbox) and **never gets a model** (passing one is an error).
+- **Hermes never writes** (we could not confine it to a worktree) and **never gets a model** (passing one is an error).
 - **Closed apps are skipped**, never launched.
 - **No cycles.** A candidate already in the hand-off chain is skipped.
 - **No retries of the same candidate** within one task's failover.
@@ -108,7 +108,7 @@ The same file can tighten the safety limits (concurrent runs, hops, hand-offs, t
 
 ## What we learned
 
-- **The planner knows more than a regex.** Most misroutes came from the fallback heuristic. Asking the calling session to label each sub-task fixed more than tuning keywords did.
+- **The planner knows more than a regex.** In our use, the misroutes we noticed tended to come from the fallback heuristic, so we ask the calling session to label each sub-task instead of tuning keywords.
 - **Price the hidden prompt, not just the visible one.** A headless agent run can load the user's entire tool profile before reading your one-line task. For tiny tasks that overhead can decide which agent is actually cheapest.
 - **Free first, when it is safe.** Easy public text work can skip paid models entirely: see [Free-tier offload](free-tier-offload.md).
 

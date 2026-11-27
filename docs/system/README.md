@@ -2,7 +2,7 @@
 
 The Yomumi Harness is the local agent harness we use to run several AI coding agents (Claude Code, Codex, Antigravity, Hermes and Cursor) on one Windows PC without them colliding, overspending tokens, or claiming that unverified work passed. This page explains the whole system: task dispatch, model routing by difficulty, a weekly token budget, a free-tier offload for easy text, an agent-to-agent coordination channel, a code-mode MCP gateway, and evidence-first verification. Only the verification layer, the [`yomumi-evidence`](../../README.md) Rust CLI, is published as code in this repository. The other parts are documented here so you can rebuild something like them.
 
-> **Status, 2026-11-27.** These pages describe the live configuration on the `master` branch of our private dispatcher checkout on that date. Work to cut its token use was in progress the same day, so defaults and limits may change. Where a number is a design limit (for example "at most 2 runs at once") we say so; measured numbers only appear when they link to a file in [`docs/evidence/`](../evidence/).
+> **Status, 2026-11-27.** These pages describe our dispatcher as configured on that date. Work to cut its token use was in progress the same day, so defaults and limits may change. Where a number is a design limit (for example "at most 2 runs at once") we say so; measured numbers only appear when they link to a file in [`docs/evidence/`](../evidence/).
 
 ## Contents
 
@@ -38,7 +38,7 @@ A **harness** here means the code and rules around the agents: who gets which ta
 | Weekly token budget | Full speed below 95% of the weekly quota; after that, stretch the last 5% to the reset. Urgent work goes first. | [Weekly token budget](weekly-token-budget.md) |
 | Free-tier offload | Sends easy, public text work (summaries, short translations) to free LLM tiers, and refuses anything sensitive before it leaves the machine. | [Free-tier offload](free-tier-offload.md) |
 | Agent-to-agent channel | A shared Markdown folder: a claims board, one thread per topic, and task files. Messages from agents are data, never approval. | [Agent channel](agent-channel.md) |
-| Code-mode gateway | One local MCP server with two tools (`search`, `execute`) that runs model-written code in a locked-down sandbox instead of loading hundreds of tool schemas. | [Code-mode gateway](code-mode-gateway.md) |
+| Code-mode gateway | One local MCP server with two tools (`search`, `execute`) that runs model-written code in a locked-down sandbox instead of loading every tool schema up front. | [Code-mode gateway](code-mode-gateway.md) |
 | Evidence-first verification | Never turn "unverified" into "pass". The public `yomumi-evidence` CLI does this for Bun test runs. | [Evidence-first verification](evidence-first-verification.md) |
 | Machine-load rules | One server, one headless browser, sequential builds, hidden processes, close what you start. | [Machine load](machine-load.md) |
 | Crash recovery | Small batches, work-in-progress commits on a branch, resumable runs. | [Crash recovery](crash-recovery.md) |
@@ -87,4 +87,4 @@ You do not need our code to get most of the benefit. A minimal version, in order
 
 ## What is not published, and why
 
-The dispatcher, the free-tier offload script and the gateway are private code. They contain machine-specific paths and configuration, and they serve a private product. These pages use short sanitized excerpts and pseudo-config instead. Product internals, production identifiers, security controls and anything from our private notes are deliberately left out. If you need a part as code, [open an issue](https://github.com/Lumichandesu/yomumi-harness/issues/new) describing your use case.
+The dispatcher, the free-tier offload script and the gateway are private code. They contain machine-specific paths and configuration, and they serve a private product. These pages use short sanitized excerpts and pseudo-config instead. The product's internals, production identifiers and security controls, and anything from our private notes, are deliberately left out; the harness's own guards are described because they are the point. If you need a part as code, [open an issue](https://github.com/Lumichandesu/yomumi-harness/issues/new) describing your use case.

@@ -1,6 +1,6 @@
 # Machine-load rules for running many AI agents on one PC
 
-The machine-load rules keep a developer PC usable while several AI coding agents run on it at once: no visible terminal windows, at most one dev server and one headless browser per agent, builds and tests run one after another, at most two dispatched agent runs machine-wide, and every agent stops what it started and nothing else. These rules exist because too many agent terminals and background processes once froze the owner's mouse and keyboard, and heavy parallel builds later crashed the machine.
+The machine-load rules keep a developer PC usable while several AI coding agents run on it at once: no visible terminal windows, at most one dev server and one headless browser per agent, builds and tests run one after another, at most two dispatched agent runs machine-wide, and every agent stops what it started and nothing else. These rules exist because we saw too many agent terminals and background processes make the owner's mouse and keyboard unresponsive, and heavy parallel work later crash the machine.
 
 [Back to the system overview](README.md)
 
@@ -18,7 +18,7 @@ The machine-load rules keep a developer PC usable while several AI coding agents
 2. **One dev or preview server and one headless browser per agent**, at most, and stop them as soon as the check is done. Headless browsers run muted.
 3. **Sequential builds and tests.** Prefer one build or test run at a time over several in parallel.
 4. **No daemons left behind.** Before finishing, list the processes you started and stop them: dev servers, previews, indexers, MCP helpers.
-5. **Never kill another agent's process.** Tell its owner on the board instead. The one standing exception the owner approved is an orphaned indexer daemon whose parent process is gone.
+5. **Never kill another agent's process.** Tell its owner on the board instead. Exceptions, if any, are named by the owner, narrowly.
 6. **At most two dispatched agent runs at once**, across every dispatcher process.
 
 ## A machine-wide run cap

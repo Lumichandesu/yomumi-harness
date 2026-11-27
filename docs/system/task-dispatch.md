@@ -43,7 +43,7 @@ A plan is a list of sub-tasks with one owner quote. Sanitized example:
 {
   "owner_quote": "<the owner's verbatim words>",
   "from": "claude-session",
-  "claude_weekly_percent": 40,
+  "claude_weekly_percent": <0-100>,
   "tasks": [
     { "key": "find", "prompt": "Find where the search ranking is computed", "cwd": "<projects>/app", "mode": "read-only", "kind": "search" },
     { "key": "fix", "prompt": "Fix the ranking bug described in the find result", "cwd": "<projects>/app", "mode": "write-in-worktree", "weight": "heavy", "depends_on": ["find"], "topic": "ranking-fix" },
@@ -98,7 +98,7 @@ What to do. Reference note paths instead of pasting large context.
 
 Why files instead of a database:
 
-- The owner can read, create or cancel a task in the notes app without any tool (set `status: cancelled` and the run stops within about two seconds, process tree included).
+- The owner can read, create or cancel a task in the notes app without any tool (set `status: cancelled`; the dispatcher polls the file and stops the run, process tree included, within a few seconds).
 - Agents without an MCP client can still take part by writing a file.
 - The record survives a crash of the process that started the run.
 - Each dispatch appends one line to the coordination board; a whole plan gets one line.
@@ -209,9 +209,9 @@ Each agent runs through its CLI's narrowest non-interactive mode, hidden, with a
 | --- | --- | --- | --- |
 | Claude Code | Print mode with JSON output, a read-only tool list (read, glob, grep), no session persistence, strict MCP config so no extra servers load. | Same base, edit tools added, file tools confined to the worktree, only `git status/diff/log` allowed in the shell. | [Headless mode docs](https://code.claude.com/docs/en/headless). |
 | Codex | `codex exec` with an explicit read-only sandbox and no approval prompts. | Workspace-write sandbox limited to the worktree. | The dispatcher always passes `--sandbox`, so a permissive user default cannot apply. [Non-interactive mode docs](https://developers.openai.com/codex/noninteractive). |
-| Antigravity | Print mode in plan mode with its sandbox. | Accept-edits mode with its sandbox. | |
-| Hermes | Query-file mode with only web and to-do tools. | Disabled: it has no file sandbox. | Picks its own free model; the dispatcher never passes one. |
-| Cursor | Print mode with JSON output, never forced. | Same. | Adapter unverified: the CLI was not installed when this was written. |
+| Antigravity | Print mode, plan mode, its sandbox on. | Accept-edits mode, its sandbox on. | Flags as observed with the CLI version we ran; check its current help output. |
+| Hermes | Query-file mode with only web and to-do tools enabled. | Disabled: we could not confine it to a worktree. | Picks its own free model; the dispatcher never passes one. |
+| Cursor | Print mode with JSON output, never forced. | Same. | Adapter unverified: the CLI was not installed when this was written. [CLI docs](https://cursor.com/docs/cli/overview). |
 
 ## Safety limits
 
@@ -231,9 +231,9 @@ A local config file may change models and chains and may *tighten* these limits,
 
 | What happened | What we changed |
 | --- | --- |
-| One CLI silently ignored its plan (read-only) mode when a certain extra flag was also passed; it only printed a warning. | Dropped that flag, and the smoke test now checks the raw reply instead of trusting the exit code. |
-| One agent's one-shot mode auto-approves every action. | Use its query-file mode instead, which denies dangerous commands by default. |
-| A user-level config for one CLI defaulted to full disk access with no approvals. | The adapter always passes an explicit sandbox flag on the command line, which overrides the user default. |
+| With the CLI version we ran in October 2026, one agent's plan (read-only) mode was ignored when a certain extra flag was also passed; only a warning was printed. | Dropped that flag, and the smoke test now checks the raw reply instead of trusting the exit code. |
+| With the version we ran, one agent's one-shot mode approved every action automatically. | Use its query-file mode instead, which denied dangerous commands by default. |
+| A user-level config file can widen a CLI's default permissions without the harness knowing. | Never rely on user defaults: the adapter always passes an explicit sandbox flag on the command line, which overrides them. |
 | MCP servers started through `.cmd` launchers opened console windows and terminal tabs on every start. | Launch `bun.exe` directly with the script path; spawn every child with `windowsHide`. |
 | A process killed hard left a task stuck in `running`. | `cancel <id>` resolves a task that no live dispatcher owns; stale run-slot locks are reclaimed when the owning process id is gone. |
 | An agent echoed the hand-off template back. | The parser ignores blocks whose request is the template text. |

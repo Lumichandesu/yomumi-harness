@@ -71,7 +71,7 @@ No. It helps when an agent would otherwise load many large tool catalogs or push
 
 ## How many agents can one PC run at once?
 
-Fewer than you think. We cap dispatched runs at two machine-wide, run builds and tests one after another, and allow at most one dev server and one headless browser per agent. More than that froze the owner's input devices, and heavy parallel builds crashed the machine. See [Machine load](machine-load.md).
+Fewer than you think. We cap dispatched runs at two machine-wide, run builds and tests one after another, and allow at most one dev server and one headless browser per agent. With more than that we saw the machine become unresponsive, and heavy parallel work crash it. See [Machine load](machine-load.md).
 
 ## Is the dispatcher source code available?
 

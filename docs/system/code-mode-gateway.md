@@ -1,4 +1,4 @@
-# Code-mode MCP gateway: two tools instead of hundreds
+# Code-mode MCP gateway: two tools instead of every tool schema
 
 The code-mode gateway is a local MCP server (Model Context Protocol) in the Yomumi Harness that exposes only two tools to a model, `search` and `execute`, instead of loading every tool schema from every connected server into the context window. The model searches for the tools and notes it needs, loads their schemas on demand, and writes a short script that calls them inside a capability-denied sandbox; the host returns compact, cited facts. It follows the "code mode" pattern described publicly by Cloudflare and Anthropic, and it is local-first, loopback-only and read-only by default.
 
@@ -54,7 +54,7 @@ Before trusting arbitrary code, the gateway actively tries to escape: it probes 
           +--------------------------+   +---------------------------+
           | Deno isolate, all denied |   | Read-only connectors      |
           | heap cap, timeout kill   |   | SQLite index (FTS5)       |
-          +--------------------------+   | write and payment guards  |
+          +--------------------------+   | write guards              |
                                          +---------------------------+
 ~~~
 
@@ -63,7 +63,7 @@ Invariants we keep:
 - **Compaction cannot relax rules.** A resumable task's policy is stored in a separate table and copied verbatim into any compacted hand-off brief; only the summary part is shortened.
 - **Writes are opt-in per connector and per caller scope.** The default caller is read-only.
 - **No paid escalation by default.** A local router does filtering, joins and classification in plain code; a route that would call a paid cloud model is blocked.
-- **Private paths stay out.** Notes matching secret, credential, invite or archive patterns are excluded from the index, and outputs are redacted.
+- **Private paths stay out.** Notes matching sensitive name patterns are excluded from the index, and outputs are redacted.
 
 ## Response envelope: token savings must not hide gaps
 
@@ -77,11 +77,11 @@ One core serves three transports:
 - an MCP stdio bridge sharing the same SQLite database (write-ahead logging);
 - a scoped adapter that translates OpenAI-style and Anthropic-style tool calls, for harnesses or models that do not speak MCP.
 
-The MCP base protocol is JSON-RPC 2.0 ([specification](https://modelcontextprotocol.io/specification/2025-06-18)).
+The MCP base protocol is JSON-RPC 2.0 ([specification](https://modelcontextprotocol.io/specification)).
 
 ## What we measured in practice
 
-Inside its own benchmarks the gateway keeps the public tool surface small and the answers compact; those numbers live with the private code, not in this repository, so we do not quote them here. The more useful lesson came from an A/B comparison during a tool audit on 2026-11-27: the gateway did not beat the agent's default built-in tools on answer quality, so it stays a task-specific and backup tool rather than the default path. That comparison was not published, so treat it as an internal observation, not a benchmark. Our reading: code mode is worth it when an agent would otherwise load many large tool catalogs or push big intermediate results through the model; for ordinary work in one repository, the built-in tools are simpler and were at least as good.
+Inside its own benchmarks the gateway keeps the public tool surface small and the answers compact; those numbers live with the private code, not in this repository, so we do not quote them here. The more useful lesson came from an A/B comparison during a tool audit on 2026-11-27: the gateway did not beat the agent's default built-in tools on answer quality, so it stays a task-specific and backup tool rather than the default path. That comparison was not published, so treat it as an internal observation, not a benchmark. Our reading: code mode is worth it when an agent would otherwise load many large tool catalogs or push big intermediate results through the model; for ordinary work in one repository, the built-in tools are simpler.
 
 ## What is not documented here
 

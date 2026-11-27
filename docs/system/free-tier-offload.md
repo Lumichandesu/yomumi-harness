@@ -1,6 +1,6 @@
 # Free-tier LLM offload with a refusal rubric
 
-The free-tier offload is a small command-line tool in the Yomumi Harness that sends easy, non-sensitive text work (summarizing public news, short translations, headline classification, simple extraction, spelling fixes) to free LLM API tiers instead of paid models. Before any text leaves the machine it runs a refusal check: secrets, credentials, e-mail addresses and anything about security, authentication, money or deletion are refused with a distinct exit code. Free output is treated as a draft that the calling agent verifies.
+The free-tier offload is a small command-line tool in the Yomumi Harness that hands low-risk text chores on public material, such as digests of public articles, a short translation or labeling a list of titles, to free LLM API tiers instead of paid models. Before any text leaves the machine it runs a refusal check: anything that looks like a secret, a credential or an e-mail address, and anything about security, sign-in, money or account deletion, is refused with a distinct exit code. Free output is treated as a draft that the calling agent verifies.
 
 [Back to the system overview](README.md)
 
@@ -36,20 +36,20 @@ Keep these on a paid model or a local model:
 
 - design and UI judgment;
 - authentication, sessions, multi-factor or passkeys;
-- money: ledgers, payments, payouts, refunds, invoices;
-- deletion, privacy and legal holds;
+- money and billing;
+- account deletion and privacy;
 - security findings, vulnerabilities, exploits;
 - code that will ship;
 - anything with credentials, e-mail addresses, personal data, or private source code.
 
-The tool enforces part of this list in code, before any network call:
+The tool enforces part of this list in code, before any network call. Simplified excerpt (the real pattern list is longer):
 
 ~~~ts
 const BLOCK: [RegExp, string][] = [
   [/(sk-[A-Za-z0-9_-]{16,}|AIza[0-9A-Za-z_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|xox[bap]-|-----BEGIN [A-Z ]*PRIVATE KEY|eyJ[A-Za-z0-9_-]{15,}\.[A-Za-z0-9_-]{10,}\.)/, 'looks like a secret/token'],
-  [/\b(postgres(ql)?:\/\/|DATABASE_URL|JWT_SECRET|api[_-]?key\s*[:=]|password\s*[:=]|passwd|bearer\s+[A-Za-z0-9._-]{12,})/i, 'credential-like text'],
+  [/(\w+:\/\/[^@\s]+:[^@\s]+@|[A-Z_]*(SECRET|TOKEN|KEY)\s*[:=]|password\s*[:=]|bearer\s+[A-Za-z0-9._-]{12,})/i, 'credential-like text'],
   [/[\w.+-]+@[\w-]+\.[\w.-]+/, 'e-mail address (possible user data)'],
-  [/\b(auth(entication|orization)?|session|mfa|totp|passkey|payout|ledger|wallet|refund|invoice|bank|delete account|legal hold|vulnerab|exploit|cve-\d)/i, 'security/money/deletion topic'],
+  [/\b(auth|session|passkey|payment|billing|delete account|vulnerab|exploit|cve-\d)/i, 'security/money/deletion topic'],
 ];
 // Sensitive text may only go to the local model; never to a cloud free tier.
 if (provider !== 'local') for (const [re, why] of BLOCK) if (re.test(text)) refuse(why); // exit 3

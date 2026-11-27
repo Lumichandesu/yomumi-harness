@@ -29,7 +29,7 @@ This glossary defines the terms used across the Yomumi Harness docs, from "agent
 | **Weekly token budget** | Full speed below 95% of weekly quota; stretch the last 5% to the reset; urgent work first. See [Weekly token budget](weekly-token-budget.md). |
 | **Free-tier offload** | Sending easy, public text work to free LLM tiers after a local refusal check. See [Free-tier offload](free-tier-offload.md). |
 | **Refusal rubric** | The list of content that must never go to a free provider. |
-| **MCP server** | A server speaking the [Model Context Protocol](https://modelcontextprotocol.io/specification/2025-06-18), which exposes tools to agent clients over JSON-RPC. |
+| **MCP server** | A server speaking the [Model Context Protocol](https://modelcontextprotocol.io/specification), which exposes tools to agent clients over JSON-RPC. |
 | **Code mode** | Letting a model write a short script against a tool API instead of calling many tools one by one. See [Code-mode gateway](code-mode-gateway.md). |
 | **Progressive disclosure** | Loading tool schemas and data only when the model asks for them. |
 | **Fail closed** | When a safety check cannot be confirmed, refuse instead of proceeding. |

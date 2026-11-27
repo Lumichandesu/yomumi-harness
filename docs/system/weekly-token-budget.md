@@ -1,6 +1,6 @@
 # Weekly token budget for AI coding agents
 
-The weekly token budget is the scheduling rule that comes before every other priority in the Yomumi Harness: work at full speed while more than 5% of the weekly AI quota is left, then slow down and spread the last 5% so it runs out about ten minutes before the weekly reset. Genuinely urgent work, such as an owner's urgent bug fix, a production outage or a security incident, always goes first. This page explains why the rule has two phases, how agents read their quota, and how the dispatcher applies it automatically.
+The weekly token budget is the scheduling rule that outranks every other priority in the Yomumi Harness. Until 95% of the weekly AI quota is used there is no pacing at all; after that, the remaining 5% is spread out so that it lasts until roughly ten minutes before the weekly reset. Urgent work (an emergency fix the owner asks for, an outage, a security incident) is never held back by it. This page explains why the rule has two phases, how agents read their quota, and how the dispatcher applies it automatically.
 
 [Back to the system overview](README.md)
 
@@ -29,7 +29,7 @@ An earlier version paced usage at all times. The owner replaced it to allow fast
 
 ## How an agent reads its quota
 
-Each agent reads its own provider's usage page or tool. In the Claude desktop app, a session can read the weekly percent used and the reset time from its usage tool, and it checks before starting a large task.
+Each agent reads its own provider's usage page or tool. Where the agent app exposes its usage (percent of the weekly limit used and when it resets), the agent checks it before starting a large task.
 
 ## How the dispatcher applies it
 
@@ -46,8 +46,8 @@ The budget rule decides *when* to spend. These habits decide *how much* each tas
 - **Downstream agents read summaries, never raw logs.**
 - **Minimal tool profiles for headless runs**, so a small task does not load every MCP server and plugin.
 - **Free tiers for easy public text** ([Free-tier offload](free-tier-offload.md)).
-- **Compact evidence.** Hand an agent a compact verdict before the raw test report. This repository measured that on two fixtures: [Token budget guide](../guide/05-token-budget.md).
-- **Cost check before spending.** Before any action that incurs money (not just quota), the agent states the cost and waits for the owner's approval. Paid add-ons are avoided in favor of free alternatives.
+- **Compact evidence.** Hand an agent a compact verdict before the raw test report. This repository measured that on two fixtures: [raw counts](../evidence/token-bench-windows.json) · [method](../guide/05-token-budget.md).
+- **Money needs a yes.** Anything that would cost money, not just quota, is stated with its cost and waits for the owner.
 
 ## What this rule does not do
 

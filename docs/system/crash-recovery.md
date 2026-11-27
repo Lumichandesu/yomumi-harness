@@ -1,6 +1,6 @@
 # Crash recovery for long AI agent runs
 
-Crash recovery in the Yomumi Harness assumes the machine, an agent app or a long run can stop at any moment, and makes that cheap: work in small batches, commit work in progress to a branch before anything risky, keep every task's state in a file rather than in memory, and resume multi-agent runs from a recorded run id instead of starting over. These practices came from real interruptions, including a day on which the PC crashed several times under load.
+Crash recovery in the Yomumi Harness assumes the machine, an agent app or a long run can stop at any moment, and makes that cheap: work in small batches, commit work in progress to a branch before anything risky, keep every task's state in a file rather than in memory, and resume multi-agent runs from a recorded run id instead of starting over. These practices came from real interruptions; on one day we saw the PC crash several times under load.
 
 [Back to the system overview](README.md)
 

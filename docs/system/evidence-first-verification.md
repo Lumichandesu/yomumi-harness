@@ -22,7 +22,7 @@ None of these needs a dishonest agent; each is an easy mistake under token or ti
 - **The count stayed the same but the failures changed.** One fix and one new regression look like "no change" ([equal counts](../guide/09-equal-counts.md)).
 - **The test never reached the real path.** A test backed by an in-memory store passes while the SQL behind it is broken. A memory-backed test proves the logic around storage, not the query, the migration or the constraint.
 - **The exit code was lost.** A second command overwrote the runner's exit status before it was recorded.
-- **Local proof was taken as production proof.** Local code and tests alone do not close a production risk; that needs evidence from the deployed system, which is the owner's call to gather.
+- **Local proof was taken as production proof.** A green local suite says nothing about what is deployed. Production questions need evidence from the deployed system, and gathering it is the owner's call.
 
 ## Three outcomes, never two
 
