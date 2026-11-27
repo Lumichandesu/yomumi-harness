@@ -1,0 +1,17 @@
+{
+  "name": "agent-dispatch",
+  "version": "0.2.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Dispatch tasks from one request to the AI agents whose apps are open on this PC, with Obsidian task files as the queue.",
+  "scripts": {
+    "test": "bun test tests",
+    "dispatch": "bun run dispatch.ts",
+    "mcp": "bun run mcp-server.ts",
+    "smoke": "bun run scripts/smoke.ts"
+  },
+  "devDependencies": {
+    "bun-types": "^1.4.3"
+  }
+}

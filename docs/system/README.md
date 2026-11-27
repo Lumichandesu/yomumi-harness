@@ -1,6 +1,6 @@
 # Yomumi Harness: a multi-agent AI coding harness for one developer PC
 
-The Yomumi Harness is the local agent harness we use to run several AI coding agents (Claude Code, Codex, Antigravity, Hermes and Cursor) on one Windows PC without them colliding, overspending tokens, or claiming that unverified work passed. This page explains the whole system: task dispatch, model routing by difficulty, a weekly token budget, a free-tier offload for easy text, an agent-to-agent coordination channel, a code-mode MCP gateway, and evidence-first verification. Only the verification layer, the [`yomumi-evidence`](../../README.md) Rust CLI, is published as code in this repository. The other parts are documented here so you can rebuild something like them.
+The Yomumi Harness is the local agent harness we use to run several AI coding agents (Claude Code, Codex, Antigravity, Hermes and Cursor) on one Windows PC without them colliding, overspending tokens, or claiming that unverified work passed. This page explains the whole system: task dispatch, model routing by difficulty, a weekly token budget, a free-tier offload for easy text, an agent-to-agent coordination channel, a code-mode MCP gateway, and evidence-first verification. The verification layer, the [`yomumi-evidence`](../../README.md) Rust CLI, is published as code, and so are snapshots of the [dispatcher and the free-tier offload](../../harness/README.md). The code-mode gateway is documented here but not published.
 
 > **Status, 2026-11-27.** These pages describe our dispatcher as configured on that date. Work to cut its token use was in progress the same day, so defaults and limits may change. Where a number is a design limit (for example "at most 2 runs at once") we say so; measured numbers only appear when they link to a file in [`docs/evidence/`](../evidence/).
 
@@ -13,7 +13,7 @@ The Yomumi Harness is the local agent harness we use to run several AI coding ag
 - [Where the public yomumi-evidence CLI fits](#where-the-public-yomumi-evidence-cli-fits)
 - [Rules that hold across every part](#rules-that-hold-across-every-part)
 - [How to rebuild something like it](#how-to-rebuild-something-like-it)
-- [What is not published, and why](#what-is-not-published-and-why)
+- [What is published, and what is not](#what-is-published-and-what-is-not)
 
 ## What problem does a multi-agent coding harness solve?
 
@@ -85,6 +85,13 @@ You do not need our code to get most of the benefit. A minimal version, in order
 5. **A machine-wide run cap** using lock files, so two terminals cannot each start two runs. See [Machine load](machine-load.md#a-machine-wide-run-cap).
 6. **An evidence gate** that refuses to call a run passed unless it can verify what ran. For Bun, use this repository's CLI.
 
-## What is not published, and why
+## What is published, and what is not
 
-The dispatcher, the free-tier offload script and the gateway are private code. They contain machine-specific paths and configuration, and they serve a private product. These pages use short sanitized excerpts and pseudo-config instead. The product's internals, production identifiers and security controls, and anything from our private notes, are deliberately left out; the harness's own guards are described because they are the point. If you need a part as code, [open an issue](https://github.com/Lumichandesu/yomumi-harness/issues/new) describing your use case.
+| Part | Published as | Where |
+| --- | --- | --- |
+| Evidence CLI (`yomumi-evidence`) | Maintained Rust code | [Repository root](../../README.md) |
+| Task dispatcher (`agent-dispatch`) | Snapshot of 2026-11-27, cleaned of machine paths and private test data | [harness/agent-dispatch](../../harness/agent-dispatch/README.md) |
+| Free-tier offload (`freellm`) | Snapshot of 2026-11-27 | [harness/free-llm](../../harness/free-llm/README.md) |
+| Code-mode gateway | Documentation only | [Code-mode gateway](code-mode-gateway.md) |
+
+The gateway stays private because several of its connectors touch private product systems. Excerpts on these pages are shortened; the published snapshots are the full code. The product's internals, production identifiers and security controls, and anything from our private notes, are deliberately left out; the harness's own guards are described because they are the point. If you need a part as code, [open an issue](https://github.com/Lumichandesu/yomumi-harness/issues/new) describing your use case.

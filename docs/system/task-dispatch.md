@@ -2,7 +2,7 @@
 
 The task dispatcher is the agent dispatcher at the center of the Yomumi Harness: you type one request in one agent session, and it splits the work into sub-tasks and hands them to the AI coding agents whose apps are open on the same PC (Claude Code, Codex, Antigravity, Hermes, Cursor). It shows a heavy/light plan before anything runs, requires the owner's verbatim words on every task, gives each writing agent its own git worktree, fails over to the next agent when one runs out of quota, and keeps every task as a Markdown file that is both the queue entry and the record.
 
-[Back to the system overview](README.md)
+[Back to the system overview](README.md) · [Source code snapshot](../../harness/agent-dispatch/README.md)
 
 ## Contents
 
@@ -201,6 +201,8 @@ The `HANDOFF` block is the only structure the dispatcher reads from an agent's r
 - the owner quote must be the root's quote, unchanged;
 - the request text is capped, and an echoed copy of the template is ignored.
 
+A valid `HANDOFF` block starts its child task straight away, without a new plan preview (`autoRunHandoffs`, on by default in the published code). The caps above bound it, but repository text that an agent reads can steer what it writes into a hand-off, so set `autoRunHandoffs` to `false` if you want every hand-off queued for review.
+
 ## Headless adapters
 
 Each agent runs through its CLI's narrowest non-interactive mode, hidden, with a timeout, and with its whole process tree killed on exit, timeout or cancel.
@@ -211,7 +213,7 @@ Each agent runs through its CLI's narrowest non-interactive mode, hidden, with a
 | Codex | `codex exec` with an explicit read-only sandbox and no approval prompts. | Workspace-write sandbox limited to the worktree. | The dispatcher always passes `--sandbox`, so a permissive user default cannot apply. [Non-interactive mode docs](https://developers.openai.com/codex/noninteractive). |
 | Antigravity | Print mode, plan mode, its sandbox on. | Accept-edits mode, its sandbox on. | Flags as observed with the CLI version we ran; check its current help output. |
 | Hermes | Query-file mode with only web and to-do tools enabled. | Disabled: we could not confine it to a worktree. | Picks its own free model; the dispatcher never passes one. |
-| Cursor | Print mode with JSON output, never forced. | Same. | Adapter unverified: the CLI was not installed when this was written. [CLI docs](https://cursor.com/docs/cli/overview). |
+| Cursor | Print mode with JSON output, never forced. No read-only flag: read-only depends on the prompt alone, in the real checkout. | Same. | Adapter unverified: the CLI was not installed when this was written. It is still in every routing chain, so remove it from `chains` if that matters to you. [CLI docs](https://cursor.com/docs/cli/overview). |
 
 ## Safety limits
 
@@ -242,7 +244,7 @@ A local config file may change models and chains and may *tighten* these limits,
 
 ## Known limits
 
-- The dispatcher cannot verify that a quote really came from the owner. It records the quote and the `from` field. Anyone who can write to the vault can forge a root task file, which is why the queue runs only on demand, shows the plan table first, and why nothing irreversible is ever unlocked by a quote alone.
+- The dispatcher cannot verify that a quote really came from the owner. It records the quote and the `from` field. Anyone who can write to the vault can forge a root task file, which is why nothing irreversible is ever unlocked by a quote alone. `run-queue` prints the plan table and then starts the tasks in the same step (use `--dry-run` to only look), and `run-queue --watch` runs new queued files every interval with no confirmation, so do not use `--watch` on a shared or synced folder that others can write to.
 - A task runs inside the process that started it. If that process dies hard, the status stays `running` until cancelled.
 - On Windows, `taskkill /T` cannot reach grandchildren that an agent CLI orphaned after a normal exit; a job object would.
 - Some adapters' result formats and quota messages are partly inferred.

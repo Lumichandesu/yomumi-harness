@@ -4,6 +4,7 @@
 
 ### Documentation
 
+- Source snapshots of the harness [task dispatcher](harness/agent-dispatch/README.md) and [free-tier offload](harness/free-llm/README.md) under `harness/` (Bun/TypeScript, as of 2026-11-27, cleaned of machine paths and private test data). They are separate from the Rust CLI and do not change it.
 - [Harness system docs](docs/system/README.md): how the wider Yomumi Harness runs several AI coding agents on one PC (task dispatch, model routing, weekly token budget, free-tier offload, agent channel, code-mode MCP gateway, evidence-first verification, machine load, crash recovery), with a glossary, FAQ, category comparison and an architecture diagram. Documentation only; no CLI behavior changed.
 - Thai and Japanese landing pages ([README.th.md](README.th.md), [README.ja.md](README.ja.md)) and a social preview image ([docs/assets/social-preview.png](docs/assets/social-preview.png)).
 

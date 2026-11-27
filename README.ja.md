@@ -5,7 +5,7 @@
 <h1 align="center">Yomumi Harness：1台の開発PCで複数の AI コーディングエージェントを動かすハーネス</h1>
 <p align="center"><a href="README.md">English</a> · <a href="README.th.md">ภาษาไทย</a> · 日本語</p>
 
-Yomumi Harness は、1台の Windows PC 上で複数の AI コーディングエージェント（Claude Code、Codex、Antigravity、Hermes、Cursor）を同時に動かすための仕組みです。エージェント同士が同じファイルを書き換えないようにし、トークンを使いすぎないようにし、確認していない結果を「テスト合格」と報告させないことを目的にしています。このリポジトリでコードとして公開しているのは、Bun の JUnit XML を検証する Rust 製 CLI `yomumi-evidence` です。それ以外の部分は、同じような仕組みを作りたい人のために英語のドキュメントとして公開しています。
+Yomumi Harness は、1台の Windows PC 上で複数の AI コーディングエージェント（Claude Code、Codex、Antigravity、Hermes、Cursor）を同時に動かすための仕組みです。エージェント同士が同じファイルを書き換えないようにし、トークンを使いすぎないようにし、確認していない結果を「テスト合格」と報告させないことを目的にしています。このリポジトリには、Bun の JUnit XML を検証する Rust 製 CLI `yomumi-evidence` と、タスク配布ツールおよび無料枠オフロードのコードのスナップショットがあります。それ以外の部分は、同じような仕組みを作りたい人のために英語のドキュメントとして公開しています。
 
 このページは短い紹介です。詳しいドキュメントは英語で書かれています。
 
@@ -38,4 +38,4 @@ cargo run --release --locked -- compare examples/replay/before.xml examples/repl
 
 ## 範囲とプライバシー
 
-このリポジトリは Yomumi の公開できる一部であり、製品そのものではありません。タスク配布ツール、無料枠オフロード、ゲートウェイのソースコードは非公開のため、ドキュメントでは環境固有の情報を除いた例だけを載せています。ライセンスは [MIT](LICENSE) です。
+このリポジトリは Yomumi の公開できる一部であり、製品そのものではありません。タスク配布ツールと無料枠オフロードのソースコードは、環境固有の情報を除いたスナップショット（2026年11月27日時点）として [harness/](harness/README.md) に公開しています。ゲートウェイは非公開です。ライセンスは [MIT](LICENSE) です。
