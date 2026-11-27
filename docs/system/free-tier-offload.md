@@ -1,8 +1,8 @@
 # Free-tier LLM offload with a refusal rubric
 
-The free-tier offload is a small command-line tool in the Yomumi Harness that hands low-risk text chores on public material, such as digests of public articles, a short translation or labeling a list of titles, to free LLM API tiers instead of paid models. Before any text leaves the machine it runs a refusal check: anything that looks like a secret, a credential or an e-mail address, and anything about security, sign-in, money or account deletion, is refused with a distinct exit code. Free output is treated as a draft that the calling agent verifies.
+The free-tier offload is a small command-line tool in the Yomumi Harness that hands low-risk text chores on public material, such as digests of public articles, a short translation or labeling a list of titles, to free LLM API tiers instead of paid models. Before any text leaves the machine it runs a refusal check: anything that matches common secret, credential or e-mail address shapes, and anything about security, sign-in, money or account deletion, is refused with a distinct exit code. Free output is treated as a draft that the calling agent verifies.
 
-[Back to the system overview](README.md)
+[Back to the system overview](README.md) · [Source code snapshot](../../harness/free-llm/README.md)
 
 ## Contents
 
@@ -51,7 +51,7 @@ const BLOCK: [RegExp, string][] = [
   [/[\w.+-]+@[\w-]+\.[\w.-]+/, 'e-mail address (possible user data)'],
   [/\b(auth|session|passkey|payment|billing|delete account|vulnerab|exploit|cve-\d)/i, 'security/money/deletion topic'],
 ];
-// Sensitive text may only go to the local model; never to a cloud free tier.
+// Sensitive text may only go to the local model, and only when its URL is a loopback address.
 if (provider !== 'local') for (const [re, why] of BLOCK) if (re.test(text)) refuse(why); // exit 3
 ~~~
 
@@ -87,9 +87,9 @@ API keys come only from per-user environment variables and are never written to 
 
 ## Provider rotation and budgets
 
-Each provider entry has a URL, a default model (overridable by environment variable), and a conservative per-minute and per-day request budget set below the provider's published limits. The provider's own 429 still wins. The last entry is a local model server on the same machine, which never sends text anywhere; it is started for the job and stopped afterwards, in line with the rule to close what you start ([Machine load](machine-load.md)).
+Each provider entry has a URL, a default model (overridable by environment variable), and a conservative per-minute and per-day request budget set below the provider's published limits. The provider's own 429 still wins. The last entry is a local model server on the same machine, which never sends text off the machine as long as its URL is a loopback address (the script refuses `--provider local` otherwise). It is started and stopped by hand with `local-up` and `local-down`, and the rule to close what you start applies ([Machine load](machine-load.md)).
 
-We do not list the exact providers or budgets here: free tiers change often, and the right mix depends on which accounts you have. Choose providers whose terms allow your use, and check what each does with submitted text before sending anything.
+The [published script](../../harness/free-llm/freellm.ts) lists the providers and budgets we used on 2026-11-27. Free tiers change often, and the right mix depends on which accounts you have. Choose providers whose terms allow your use, and check what each does with submitted text before sending anything.
 
 ## Failure modes and limits
 

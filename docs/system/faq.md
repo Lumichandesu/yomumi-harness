@@ -75,4 +75,4 @@ Fewer than you think. We cap dispatched runs at two machine-wide, run builds and
 
 ## Is the dispatcher source code available?
 
-Not today. The public code in this repository is the verification layer, `yomumi-evidence`. These pages document the rest with sanitized excerpts. If you need part of it as code, [open an issue](https://github.com/Lumichandesu/yomumi-harness/issues/new) with your use case.
+Yes, as a snapshot. A cleaned copy of the dispatcher as of 2026-11-27 is in [harness/agent-dispatch](../../harness/agent-dispatch/README.md), with its 65 tests (fake agent, no quota), and the free-tier offload script is in [harness/free-llm](../../harness/free-llm/README.md). The code-mode gateway is not published. Our live copies keep changing, so treat the snapshots as reference code to adapt.

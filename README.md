@@ -20,7 +20,7 @@ Yomumi Harness is an open-source Rust CLI for Bun test automation. It validates 
 
 ## The wider Yomumi Harness system
 
-This CLI is the verification layer of a larger **multi-agent AI coding harness** we run on one developer PC: an agent dispatcher that sends sub-tasks to Claude Code, Codex, Antigravity, Hermes and Cursor, LLM model routing by difficulty and cost, a weekly token budget, a free-tier offload with a refusal rubric, an agent-to-agent coordination channel, a code-mode MCP server, and evidence-first rules so agents cannot turn unverified work into a pass. Only this CLI is published as code; the rest is documented so you can build something like it. [Read the harness system docs](docs/system/README.md) · [FAQ](docs/system/faq.md) · [Agent harness vs framework, orchestrator and eval harness](docs/system/comparison.md)
+This CLI is the verification layer of a larger **multi-agent AI coding harness** we run on one developer PC: an agent dispatcher that sends sub-tasks to Claude Code, Codex, Antigravity, Hermes and Cursor, LLM model routing by difficulty and cost, a weekly token budget, a free-tier offload with a refusal rubric, an agent-to-agent coordination channel, a code-mode MCP server, and evidence-first rules so agents cannot turn unverified work into a pass. Snapshots of the dispatcher and the free-tier offload are published under [`harness/`](harness/README.md); the rest is documented so you can build something like it. [Read the harness system docs](docs/system/README.md) · [FAQ](docs/system/faq.md) · [Agent harness vs framework, orchestrator and eval harness](docs/system/comparison.md)
 
 ## Try it
 
