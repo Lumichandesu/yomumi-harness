@@ -11,10 +11,16 @@
   <a href="#use-it-in-your-project">Use in a project</a> ·
   <a href="#results-at-a-glance">Results</a> ·
   <a href="docs/guide/README.md">Field guide</a> ·
+  <a href="docs/system/README.md">Harness system docs</a> ·
   <a href="AGENT-START.md">Agent entry point</a>
 </p>
+<p align="center">English · <a href="README.th.md">ภาษาไทย</a> · <a href="README.ja.md">日本語</a></p>
 
 Yomumi Harness is an open-source Rust CLI for Bun test automation. It validates Bun JUnit XML, compares before/after runs for regressions, and produces compact JSON evidence for developers, CI, and coding agents. Bun answers **“Did this command pass?”** Yomumi Harness adds **“Did we run the intended files, and are the before and after results comparable?”** It keeps the original JUnit report local and hands reviewers or agents a compact JSON result.
+
+## The wider Yomumi Harness system
+
+This CLI is the verification layer of a larger **multi-agent AI coding harness** we run on one developer PC: an agent dispatcher that sends sub-tasks to Claude Code, Codex, Antigravity, Hermes and Cursor, LLM model routing by difficulty and cost, a weekly token budget, a free-tier offload with a refusal rubric, an agent-to-agent coordination channel, a code-mode MCP server, and evidence-first rules so agents cannot turn unverified work into a pass. Only this CLI is published as code; the rest is documented so you can build something like it. [Read the harness system docs](docs/system/README.md) · [FAQ](docs/system/faq.md) · [Agent harness vs framework, orchestrator and eval harness](docs/system/comparison.md)
 
 ## Try it
 

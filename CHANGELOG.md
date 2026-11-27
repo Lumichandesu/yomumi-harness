@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Documentation
+
+- [Harness system docs](docs/system/README.md): how the wider Yomumi Harness runs several AI coding agents on one PC (task dispatch, model routing, weekly token budget, free-tier offload, agent channel, code-mode MCP gateway, evidence-first verification, machine load, crash recovery), with a glossary, FAQ, category comparison and an architecture diagram. Documentation only; no CLI behavior changed.
+- Thai and Japanese landing pages ([README.th.md](README.th.md), [README.ja.md](README.ja.md)) and a social preview image ([docs/assets/social-preview.png](docs/assets/social-preview.png)).
+
 ### Fixed
 
 - Validate nested Bun `describe` suite totals bottom-up, avoiding false rejections on valid nested reports.
