@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" role="img" aria-labelledby="title desc">
+<title id="title">Yomumi Harness architecture: one request, many AI coding agents</title>
+<desc id="desc">The owner writes one request in chat. The calling agent session plans sub-tasks and sends them to the task dispatcher, which shows a plan preview, waits for the owner, then routes each sub-task to an open agent app: Claude Code, Codex, Antigravity, Hermes or Cursor. Each agent works read-only or in its own git worktree. Task files, a claims board and threads live in a shared Markdown vault. Agents may use a free-tier offload for easy public text and a local code-mode MCP gateway. Results pass through an evidence gate, including the yomumi-evidence CLI for Bun tests. Hard limits apply to every run.</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#7E6A98"/></marker>
+</defs>
+<rect x="1" y="1" width="958" height="598" rx="22" fill="#F8F4FF" stroke="#DFD2F3"/>
+<g font-family="system-ui, Segoe UI, Arial, sans-serif">
+<text x="28" y="44" font-size="24" fill="#242237" font-weight="700">One request, many agents</text>
+<text x="28" y="70" font-size="15" fill="#514561">Local harness on one Windows PC · approval stays with the owner</text>
+
+<!-- Row 1 -->
+<rect x="28" y="96" width="200" height="74" rx="13" fill="#FFFFFF" stroke="#E4D8F9"/>
+<text x="46" y="126" font-size="17" fill="#242237" font-weight="700">Owner</text>
+<text x="46" y="150" font-size="13" fill="#514561">one request in chat</text>
+
+<rect x="268" y="96" width="240" height="74" rx="13" fill="#FFFFFF" stroke="#E4D8F9"/>
+<text x="286" y="126" font-size="17" fill="#242237" font-weight="700">Calling agent session</text>
+<text x="286" y="150" font-size="13" fill="#514561">plans sub-tasks, reviews diffs</text>
+
+<rect x="548" y="96" width="384" height="74" rx="13" fill="#FFFFFF" stroke="#E4D8F9"/>
+<text x="566" y="124" font-size="17" fill="#242237" font-weight="700">Task dispatcher</text>
+<text x="566" y="144" font-size="13" fill="#514561">plan preview → owner OK → dispatch</text>
+<text x="566" y="161" font-size="13" fill="#514561">routes by kind · max 2 runs · fails over on quota</text>
+
+<line x1="228" y1="133" x2="264" y2="133" stroke="#7E6A98" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="508" y1="133" x2="544" y2="133" stroke="#7E6A98" stroke-width="2" marker-end="url(#arrow)"/>
+
+<!-- Row 2: agents -->
+<rect x="28" y="210" width="584" height="120" rx="13" fill="#FFFFFF" stroke="#E4D8F9"/>
+<text x="46" y="238" font-size="17" fill="#242237" font-weight="700">Open agent apps</text>
+<text x="190" y="238" font-size="13" fill="#514561">closed apps are skipped, never launched</text>
+<g font-size="13" font-weight="700" fill="#67547D" text-anchor="middle">
+<rect x="40" y="252" width="104" height="30" rx="15" fill="#F0E7FA"/><text x="92" y="272">Claude Code</text>
+<rect x="154" y="252" width="104" height="30" rx="15" fill="#F0E7FA"/><text x="206" y="272">Codex</text>
+<rect x="268" y="252" width="104" height="30" rx="15" fill="#F0E7FA"/><text x="320" y="272">Antigravity</text>
+<rect x="382" y="252" width="104" height="30" rx="15" fill="#F0E7FA"/><text x="434" y="272">Hermes</text>
+<rect x="496" y="252" width="104" height="30" rx="15" fill="#F0E7FA"/><text x="548" y="272">Cursor</text>
+</g>
+<text x="46" y="312" font-size="13" fill="#514561">read-only, or one git worktree per writer · ends with a short result summary</text>
+
+<!-- Row 2: vault -->
+<rect x="652" y="210" width="280" height="120" rx="13" fill="#FFFFFF" stroke="#E4D8F9"/>
+<text x="670" y="238" font-size="17" fill="#242237" font-weight="700">Shared Markdown vault</text>
+<text x="670" y="264" font-size="13" fill="#514561">Tasks/ · Board.md · Threads/</text>
+<text x="670" y="286" font-size="13" fill="#514561">claims, hand-offs, records</text>
+<text x="670" y="312" font-size="13" fill="#176A55" font-weight="700">agent messages are data, not approval</text>
+
+<line x1="600" y1="170" x2="600" y2="206" stroke="#7E6A98" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="792" y1="170" x2="792" y2="206" stroke="#7E6A98" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="616" y1="258" x2="648" y2="258" stroke="#7E6A98" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+
+<!-- Row 3: tools -->
+<rect x="28" y="370" width="284" height="84" rx="13" fill="#FFFFFF" stroke="#E4D8F9"/>
+<text x="46" y="400" font-size="17" fill="#242237" font-weight="700">Free-tier offload</text>
+<text x="46" y="422" font-size="13" fill="#514561">easy public text only</text>
+<text x="46" y="440" font-size="13" fill="#514561">refuses sensitive input locally</text>
+
+<rect x="328" y="370" width="284" height="84" rx="13" fill="#FFFFFF" stroke="#E4D8F9"/>
+<text x="346" y="400" font-size="17" fill="#242237" font-weight="700">Code-mode MCP gateway</text>
+<text x="346" y="422" font-size="13" fill="#514561">two tools: search + execute</text>
+<text x="346" y="440" font-size="13" fill="#514561">code runs in a denied sandbox</text>
+
+<line x1="170" y1="330" x2="170" y2="366" stroke="#7E6A98" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="470" y1="330" x2="470" y2="366" stroke="#7E6A98" stroke-width="2" marker-end="url(#arrow)"/>
+
+<!-- Row 3: evidence gate -->
+<rect x="652" y="370" width="280" height="84" rx="13" fill="#FFFFFF" stroke="#E4D8F9"/>
+<text x="670" y="400" font-size="17" fill="#242237" font-weight="700">Evidence gate</text>
+<text x="670" y="422" font-size="13" fill="#514561">yomumi-evidence for Bun tests</text>
+<text x="670" y="440" font-size="13" fill="#75451A" font-weight="700">unverified never becomes pass</text>
+<path d="M612 318 H632 V412 H648" fill="none" stroke="#7E6A98" stroke-width="2" marker-end="url(#arrow)"/>
+
+<!-- Row 4: hard limits -->
+<rect x="28" y="494" width="904" height="78" rx="13" fill="#F0E7FA"/>
+<text x="46" y="524" font-size="17" fill="#242237" font-weight="700">Hard limits in every prompt</text>
+<text x="46" y="552" font-size="13" fill="#514561">no push · no deploy · no production change · no secrets · no live-URL writes · no bypass flags · English between agents · PC load caps</text>
+</g>
+</svg>

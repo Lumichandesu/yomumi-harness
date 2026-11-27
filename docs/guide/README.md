@@ -38,3 +38,5 @@ This guide borrows the documentation pattern of a short front door and task-orie
 [Focused tests: catch rows Bun silently omitted](11-focused-tests.md)
 
 [Reframe a vague request before writing code](12-reframe.md)
+
+[The wider Yomumi Harness system: multi-agent dispatch, model routing and evidence-first rules](../system/README.md)

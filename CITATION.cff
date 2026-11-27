@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use or refer to this software or its documentation, please cite it as below."
+type: software
+title: "Yomumi Harness"
+abstract: >-
+  A Rust CLI that verifies Bun JUnit XML test evidence (yomumi-evidence), and
+  documentation of a local multi-agent AI coding harness: task dispatch, model
+  routing, a weekly token budget, an agent-to-agent channel and evidence-first
+  verification.
+authors:
+  - alias: Lumichandesu
+repository-code: "https://github.com/Lumichandesu/yomumi-harness"
+license: MIT
+keywords:
+  - agent harness
+  - AI coding agents
+  - multi-agent orchestration
+  - model routing
+  - test evidence
+  - Bun
+  - JUnit
+  - Rust
