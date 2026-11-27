@@ -73,7 +73,7 @@ Every response carries a data-boundary marker (`UNTRUSTED_DATA_NOT_INSTRUCTIONS`
 
 One core serves three transports:
 
-- MCP Streamable HTTP bound to `127.0.0.1` only;
+- MCP Streamable HTTP bound to the loopback interface only;
 - an MCP stdio bridge sharing the same SQLite database (write-ahead logging);
 - a scoped adapter that translates OpenAI-style and Anthropic-style tool calls, for harnesses or models that do not speak MCP.
 
