@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+	<testcase name="tests\fixtures\node\crash.fixture.mjs" time="0.046014" classname="test" failure="test failed">
+		<failure type="testCodeFailure" message="test failed">
+[Error: test failed] { code: 'ERR_TEST_FAILURE', failureType: 'testCodeFailure', cause: 'test failed', exitCode: 1, signal: null }
+		</failure>
+	</testcase>
+	<testsuite name="cart" time="0.001228" disabled="0" errors="0" tests="2" failures="0" skipped="0" hostname="redacted-host">
+		<testsuite name="quantity" time="0.000806" disabled="0" errors="0" tests="1" failures="0" skipped="0" hostname="redacted-host">
+			<testcase name="keeps the requested quantity" time="0.000373" classname="test"/>
+		</testsuite>
+		<testcase name="starts empty" time="0.000085" classname="test"/>
+	</testsuite>
+	<!-- tests 3 -->
+	<!-- suites 2 -->
+	<!-- pass 2 -->
+	<!-- fail 1 -->
+	<!-- cancelled 0 -->
+	<!-- skipped 0 -->
+	<!-- todo 0 -->
+	<!-- duration_ms 74.2547 -->
+</testsuites>

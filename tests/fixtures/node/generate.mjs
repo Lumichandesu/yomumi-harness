@@ -10,11 +10,14 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const here = fileURLToPath(new URL(".", import.meta.url));
 const root = resolve(here, "../../..");
 const runs = [
-  { name: "clean", mode: "pass", files: ["pair"], exit: 0 },
-  { name: "broken", mode: "broken", files: ["pair"], exit: 1 },
-  { name: "missing", mode: "missing", files: ["pair"], exit: 0 },
-  { name: "mixed", mode: "pass", files: ["mixed"], exit: 1 },
-  { name: "crash", mode: "pass", files: ["pair", "crash"], exit: 1 },
+  { name: "clean", files: ["pair"], exit: 0 },
+  { name: "broken", files: ["broken"], exit: 1 },
+  { name: "gone", files: ["gone"], exit: 0 },
+  { name: "mixed", files: ["mixed"], exit: 1 },
+  { name: "crash", files: ["pair", "crash"], exit: 1 },
+  { name: "exit", files: ["exit"], exit: 0 },
+  { name: "late-exit", files: ["late-exit"], exit: 0 },
+  { name: "empty", files: ["empty"], exit: 0 },
 ];
 
 const literal = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -47,7 +50,7 @@ const outputs = [];
 try {
   for (const run of runs) {
     const report = join(scratch, `${run.name}.xml`);
-    const env = { ...process.env, YOMUMI_NODE_FIXTURE: run.mode };
+    const env = { ...process.env };
     delete env.NODE_OPTIONS;
     delete env.NODE_TEST_CONTEXT;
     const child = spawnSync(
@@ -64,12 +67,18 @@ try {
       throw new Error(`${run.name}: expected exit ${run.exit}, got ${child.status}`);
     }
     const xml = sanitize(readFileSync(report, "utf8"));
-    if (!xml.includes('file="/fixture-root')) {
-      throw new Error(`${run.name}: this Node release emits no testcase file attribute`);
+    // yomumi-evidence takes file scope from the caller because reports name no file.
+    if (/<testcase\s[^>]*\sfile="/.test(xml)) {
+      throw new Error(`${run.name}: this Node release names testcase files; revisit file scoping`);
     }
     outputs.push([`${run.name}.xml`, xml]);
   }
-  const provenance = { node: process.version, platform: process.platform, runs };
+  const provenance = {
+    node: process.version,
+    platform: process.platform,
+    method: "tests/fixtures/node/generate.mjs",
+    runs,
+  };
   outputs.push(["provenance.json", `${JSON.stringify(provenance, null, 2)}\n`]);
   for (const [name, content] of outputs) {
     writeFileSync(join(here, name), content);

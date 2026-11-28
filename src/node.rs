@@ -2,6 +2,10 @@
 //!
 //! The format differs from Bun's: the root has no attributes, run totals are root-level
 //! comments, suite totals cover direct children only, and testcases carry no source line.
+//!
+//! Node 22 also names no source file for a testcase: no attribute, property, or suite
+//! boundary says which file a passing test came from. File scope therefore comes from the
+//! caller, who declares the single test file a report was produced from.
 
 use super::{
     attr, count_value, delta, sha, summarize, tag, xml_text, Checked, Cluster, Compared, Counts,
@@ -78,7 +82,7 @@ struct NodeReport {
     report: Report,
     todo: usize,
     cancelled: usize,
-    /// Results that stand for a whole file (a crash, or a file that registered no test).
+    /// Results that stand for a whole file (a crash, an early exit, or no test).
     file_level: usize,
     duration: Millis,
 }
@@ -162,32 +166,22 @@ fn check_suite(suite: Node<'_, '_>) -> Checked<()> {
     Ok(())
 }
 
-/// Node emits absolute paths. Only the caller-supplied root is stripped.
-fn project_file(raw: &str, root: Option<&str>) -> Option<String> {
-    let path = raw.replace('\\', "/");
-    let inside = root.and_then(|root| path.strip_prefix(root)?.strip_prefix('/'));
-    super::relative_file(inside.unwrap_or(&path))
+/// Node reports a file that crashed, exited early, or registered no test as a top-level
+/// case named after its path. Any script extension counts, whatever the path contains. A
+/// real top-level test with such a name is refused too, which errs on the safe side.
+fn names_a_file(name: &str) -> bool {
+    name.rsplit_once('.')
+        .is_some_and(|(_, ext)| super::script_extension(&ext.to_ascii_lowercase()))
 }
 
-/// Node reports a file that crashed (or ran no test) as a top-level case named after it.
-fn names_a_file(name: &str, raw_file: &str, file: Option<&str>, root: Option<&str>) -> bool {
-    let name = name.replace('\\', "/");
-    let raw_file = raw_file.replace('\\', "/");
-    if !raw_file.is_empty() && (raw_file == name || raw_file.ends_with(&format!("/{name}"))) {
-        return true;
-    }
-    project_file(&name, root).is_some_and(|path| path.contains('/') || file.is_none())
-}
-
-fn parse(raw: &[u8], root_dir: Option<&str>) -> Checked<NodeReport> {
+/// `file` is the caller's declaration of the report's origin, already validated.
+fn parse(raw: &[u8], file: Option<&str>) -> Checked<NodeReport> {
     let doc = Document::parse(xml_text(raw)?).map_err(|_| ())?;
     let root = doc.root_element();
     if !is_node_root(root) {
         return Err(());
     }
     let summary = read_summary(root)?;
-    let base = root_dir.map(|dir| dir.replace('\\', "/").trim_end_matches('/').to_owned());
-    let base = base.as_deref();
     let mut r = Report {
         counts: Counts::default(),
         files: BTreeMap::new(),
@@ -211,7 +205,9 @@ fn parse(raw: &[u8], root_dir: Option<&str>) -> Checked<NodeReport> {
             _ => return Err(()),
         }
         let name = attr(node, "name");
-        if name.trim().is_empty() {
+        // A per-testcase file attribute is a report shape that has not been verified
+        // against real output; it could contradict the declared file, so refuse it.
+        if name.trim().is_empty() || node.attribute("file").is_some() {
             return Err(());
         }
         Millis::parse(attr(node, "time"))?;
@@ -239,13 +235,9 @@ fn parse(raw: &[u8], root_dir: Option<&str>) -> Checked<NodeReport> {
         };
         r.counts.tests += 1;
         r.counts.failures += usize::from(signal.is_some());
-        let raw_file = attr(node, "file");
-        let file = project_file(raw_file, base);
-        if parent == "testsuites" && names_a_file(name, raw_file, file.as_deref(), base) {
-            file_level += 1;
-        }
-        if let Some(file) = file.as_ref() {
-            let counts = r.files.entry(file.clone()).or_default();
+        file_level += usize::from(parent == "testsuites" && names_a_file(name));
+        if let Some(file) = file {
+            let counts = r.files.entry(file.into()).or_default();
             counts.tests += 1;
             counts.failed += usize::from(signal.is_some());
             counts.skipped += usize::from(skip_mark || todo_mark);
@@ -280,8 +272,8 @@ fn parse(raw: &[u8], root_dir: Option<&str>) -> Checked<NodeReport> {
                     ..Cluster::default()
                 });
             cluster.count += 1;
-            if let Some(file) = file.as_ref() {
-                cluster.files.insert(file.clone());
+            if let Some(file) = file {
+                cluster.files.insert(file.into());
             } else {
                 cluster.unknown += 1;
             }
@@ -301,7 +293,7 @@ fn parse(raw: &[u8], root_dir: Option<&str>) -> Checked<NodeReport> {
             }
             path.reverse();
             let key = [
-                file,
+                file.into(),
                 json!(path).to_string(),
                 name.into(),
                 attr(node, "classname").into(),
@@ -336,8 +328,17 @@ fn parse(raw: &[u8], root_dir: Option<&str>) -> Checked<NodeReport> {
     })
 }
 
-pub(crate) fn compact(raw: &[u8], root: Option<&str>, request: &Request) -> Checked<(Value, i32)> {
-    let node = parse(raw, root)?;
+/// Says where file scope came from, so it is never mistaken for report evidence.
+fn file_scope(file: Option<&str>) -> &'static str {
+    if file.is_some() {
+        "caller_declared"
+    } else {
+        "unknown"
+    }
+}
+
+pub(crate) fn compact(raw: &[u8], file: Option<&str>, request: &Request) -> Checked<(Value, i32)> {
+    let node = parse(raw, file)?;
     let mut problems = Vec::new();
     if node.file_level > 0 {
         problems.push("file_level_result");
@@ -345,7 +346,13 @@ pub(crate) fn compact(raw: &[u8], root: Option<&str>, request: &Request) -> Chec
     if node.cancelled > 0 {
         problems.push("cancelled_tests");
     }
+    // A process that exits 0 part way can leave a clean report with tests missing, and
+    // the report cannot show it. Only a trusted count can.
+    if request.expected_tests.is_none() {
+        problems.push("expected_test_count_required");
+    }
     let (mut result, code) = summarize(&node.report, &NODE, request, problems);
+    result["fileScope"] = json!(file_scope(file));
     result["todo"] = json!(node.todo);
     result["cancelled"] = json!(node.cancelled);
     result["fileLevelResults"] = json!(node.file_level);
@@ -374,12 +381,12 @@ fn comparable(r: &NodeReport, exit: i32, reasons: [&'static str; 5]) -> Compared
 
 pub(crate) fn compare(
     raw: [&[u8]; 2],
-    roots: [Option<&str>; 2],
+    file: Option<&str>,
     exits: [i32; 2],
     summary_only: bool,
 ) -> Compared<(Value, i32)> {
     let load = |side: usize, invalid: &'static str| {
-        parse(raw[side], roots[side]).map_err(|()| {
+        parse(raw[side], file).map_err(|()| {
             if super::parse(raw[side], false).is_ok() {
                 "runner_mismatch"
             } else {
@@ -414,6 +421,7 @@ pub(crate) fn compare(
     let mut output = delta(&before.report, &after.report, raw, summary_only)?;
     let (x, y) = (&before.duration, &after.duration);
     output["runner"] = json!("node");
+    output["fileScope"] = json!(file_scope(file));
     // Informational only: duration never changes the verdict.
     output["durationMs"] = json!({
         "before": x.source,
@@ -432,12 +440,10 @@ mod tests {
     use super::*;
 
     const FAIL: &str = r#"<failure type="testCodeFailure" message="2 !== 3">trace</failure>"#;
-    const ROOT: Option<&str> = Some("/work");
+    const FILE: Option<&str> = Some("a.test.mjs");
 
     fn case(name: &str, inner: &str) -> String {
-        format!(
-            r#"<testcase name="{name}" time="0.000100" classname="test" file="/work/a.test.mjs">{inner}</testcase>"#
-        )
+        format!(r#"<testcase name="{name}" time="0.000100" classname="test">{inner}</testcase>"#)
     }
 
     fn suite(name: &str, tests: usize, failures: usize, body: &str) -> String {
@@ -465,16 +471,22 @@ mod tests {
         )
     }
 
+    fn scoped_with(xml: &str, file: Option<&str>, exit: i32, tests: Option<usize>) -> (Value, i32) {
+        let expected = ["a.test.mjs".to_owned()];
+        let request = super::super::request(6, false, Some(exit), &expected, tests).unwrap();
+        compact(xml.as_bytes(), file, &request).unwrap()
+    }
+
+    /// A declared file and the report's own row count as the trusted count.
     fn scoped(xml: &str, exit: i32) -> (Value, i32) {
-        let request =
-            super::super::request(6, false, Some(exit), &["a.test.mjs".to_owned()], None).unwrap();
-        compact(xml.as_bytes(), ROOT, &request).unwrap()
+        let tests = xml.matches("<testcase ").count();
+        scoped_with(xml, FILE, exit, Some(tests))
     }
 
     fn diff(before: &str, after: &str, exits: [i32; 2]) -> Compared<(Value, i32)> {
         compare(
             [before.as_bytes(), after.as_bytes()],
-            [ROOT, ROOT],
+            FILE,
             exits,
             false,
         )
@@ -494,6 +506,18 @@ mod tests {
             ("5", "5.0000"),
             ("5.1", "5.1000"),
             ("999999999999.99995", "1000000000000.0000"),
+            ("1.00005", "1.0001"),
+            ("1.000050", "1.0001"),
+            ("1.000049999999999999999999", "1.0000"),
+            ("1.99995", "2.0000"),
+            ("1346.00005", "1346.0001"),
+            ("1346.99995", "1347.0000"),
+            ("1.50000", "1.5000"),
+            ("1.500000000000000000000000", "1.5000"),
+            ("5.0", "5.0000"),
+            ("0.0000", "0.0000"),
+            // Fixed-point binary floats get this one wrong when rounding to four places.
+            ("1.00015", "1.0002"),
         ] {
             let parsed = Millis::parse(source).unwrap();
             assert_eq!(parsed.source, source);
@@ -531,6 +555,30 @@ mod tests {
     }
 
     #[test]
+    fn compare_works_on_rounded_values_at_the_half_way_edge() {
+        for (before, after, difference) in [
+            // Both sides round before they are subtracted.
+            ("1.00005", "1.00004999", "-0.0001"),
+            ("1.00004999", "1.00005", "0.0001"),
+            ("1.00005", "1.00014999", "0.0000"),
+            ("1.99995", "2", "0.0000"),
+            ("2.50000", "2.5", "0.0000"),
+            ("2.5", "2.500000", "0.0000"),
+            ("9.99995", "9.99994", "-0.0001"),
+            ("0", "999999999999.9999", "999999999999.9999"),
+        ] {
+            let (out, _) = diff(&pair("", "", before), &pair("", "", after), [0, 0]).unwrap();
+            // Source text survives untouched, trailing zeros included.
+            assert_eq!(out["durationMs"]["before"], before);
+            assert_eq!(out["durationMs"]["after"], after);
+            assert_eq!(
+                out["durationMs"]["differenceFourPlaces"], difference,
+                "{before} -> {after}"
+            );
+        }
+    }
+
+    #[test]
     fn an_invalid_duration_invalidates_the_report() {
         let good = pair("", "", "1.5");
         for bad in [
@@ -538,7 +586,30 @@ mod tests {
             good.replace("time=\"0.000100\"", "time=\"NaN\""),
             good.replace("<!-- duration_ms 1.5 -->", ""),
         ] {
-            assert!(parse(bad.as_bytes(), ROOT).is_err());
+            assert!(parse(bad.as_bytes(), FILE).is_err());
+        }
+    }
+
+    #[test]
+    fn a_missing_time_attribute_invalidates_the_report() {
+        let body = suite("a", 1, 0, &case("one", ""));
+        let good = report(&body, [1, 1, 1, 0, 0, 0, 0], "2.5");
+        assert!(parse(good.as_bytes(), FILE).is_ok());
+        for bad in [
+            // On a testcase, then on a suite.
+            good.replace(" time=\"0.000100\"", ""),
+            good.replace(" time=\"0.000200\"", ""),
+            good.replace("time=\"0.000100\"", "time=\"\""),
+            good.replace("time=\"0.000200\"", "time=\"\""),
+            good.replace("<!-- duration_ms 2.5 -->", "<!-- duration_ms -->"),
+        ] {
+            assert_ne!(bad, good);
+            assert!(parse(bad.as_bytes(), FILE).is_err(), "{bad}");
+            assert_eq!(
+                diff(&good, &bad, [0, 0]),
+                Err("after_report_invalid"),
+                "{bad}"
+            );
         }
     }
 
@@ -562,7 +633,14 @@ mod tests {
 
     #[test]
     fn a_crashed_file_is_unverified_and_not_comparable() {
-        for name in ["a.test.mjs", "/work/a.test.mjs", "sub/other.test.mjs"] {
+        for name in [
+            "a.test.mjs",
+            "/work/a.test.mjs",
+            "sub/other.test.mjs",
+            r"tests\a.test.mjs",
+            r"my tests\ünicode (1)\a.test.MJS",
+            r"..\outside.ts",
+        ] {
             let crash = report(&case(name, FAIL), [1, 0, 0, 1, 0, 0, 0], "2.5");
             let (out, code) = scoped(&crash, 1);
             assert_eq!(code, 2, "{name}");
@@ -618,7 +696,7 @@ mod tests {
             good.replace(FAIL, &format!("{FAIL}{FAIL}")),
             good.replace(FAIL, "<flakyFailure/>"),
         ] {
-            assert!(parse(bad.as_bytes(), ROOT).is_err(), "{bad}");
+            assert!(parse(bad.as_bytes(), FILE).is_err(), "{bad}");
         }
     }
 
@@ -629,8 +707,8 @@ mod tests {
             let body = suite("outer", 2, outer_failures, &(case("shallow", "") + &inner));
             report(&body, [2, 2, 1, 1, 0, 0, 0], "2.5")
         };
-        assert!(parse(nested(1).as_bytes(), ROOT).is_ok());
-        assert!(parse(nested(0).as_bytes(), ROOT).is_err());
+        assert!(parse(nested(1).as_bytes(), FILE).is_ok());
+        assert!(parse(nested(0).as_bytes(), FILE).is_err());
     }
 
     #[test]
@@ -645,12 +723,43 @@ mod tests {
     }
 
     #[test]
-    fn paths_outside_the_supplied_root_are_unknown() {
+    fn without_a_declared_file_nothing_is_verified() {
         let xml = pair("", "", "2.5");
+        let (out, code) = scoped_with(&xml, None, 0, Some(2));
+        assert_eq!(code, 2);
+        assert_eq!(out["fileScope"], "unknown");
+        assert_eq!(out["problems"], json!(["file_coverage_mismatch"]));
         assert_eq!(
-            compare([xml.as_bytes(), xml.as_bytes()], [None, None], [0, 0], false),
+            compare([xml.as_bytes(), xml.as_bytes()], None, [0, 0], false),
             Err("before_file_scope_invalid")
         );
+    }
+
+    #[test]
+    fn a_declared_file_must_match_the_expected_scope() {
+        let xml = pair("", "", "2.5");
+        let (out, code) = scoped_with(&xml, Some("b.test.mjs"), 0, Some(2));
+        assert_eq!(code, 2);
+        assert_eq!(out["problems"], json!(["file_coverage_mismatch"]));
+        assert_eq!(scoped(&xml, 0).0["fileScope"], "caller_declared");
+    }
+
+    #[test]
+    fn a_scoped_verdict_needs_a_trusted_test_count() {
+        let xml = pair("", "", "2.5");
+        let (out, code) = scoped_with(&xml, FILE, 0, None);
+        assert_eq!(code, 2);
+        assert_eq!(out["problems"], json!(["expected_test_count_required"]));
+        let (out, code) = scoped_with(&xml, FILE, 0, Some(3));
+        assert_eq!(code, 2);
+        assert_eq!(out["problems"], json!(["test_count_mismatch"]));
+    }
+
+    #[test]
+    fn an_unverified_file_attribute_is_refused() {
+        let xml = pair("", "", "2.5")
+            .replacen("classname=\"test\"", "classname=\"test\" file=\"b.test.mjs\"", 1);
+        assert!(parse(xml.as_bytes(), FILE).is_err());
     }
 
     #[test]

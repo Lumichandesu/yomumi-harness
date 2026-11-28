@@ -40,25 +40,27 @@ fn relative_file(s: &str) -> Option<String> {
         return None;
     }
     let (base, ext) = s.rsplit_once('.')?;
-    if base.rsplit('/').next()?.is_empty()
-        || !matches!(
-            ext,
-            "js" | "ts"
-                | "jsx"
-                | "tsx"
-                | "mjs"
-                | "mts"
-                | "mjsx"
-                | "mtsx"
-                | "cjs"
-                | "cts"
-                | "cjsx"
-                | "ctsx"
-        )
-    {
+    if base.rsplit('/').next()?.is_empty() || !script_extension(ext) {
         return None;
     }
     Some(s.into())
+}
+
+fn script_extension(ext: &str) -> bool {
+    matches!(
+        ext,
+        "js" | "ts"
+            | "jsx"
+            | "tsx"
+            | "mjs"
+            | "mts"
+            | "mjsx"
+            | "mtsx"
+            | "cjs"
+            | "cts"
+            | "cjsx"
+            | "ctsx"
+    )
 }
 
 fn sha(data: impl AsRef<[u8]>) -> String {
@@ -571,14 +573,14 @@ fn run(mut args: impl Iterator<Item = String>, mode: &str) -> Checked<(Value, i3
     if mode == "compact" {
         let (mut limit, mut files, mut exit, mut expect) = (6, false, None, Vec::new());
         let mut expected_tests = None;
-        let (mut node_exit, mut node_root) = (None, None);
+        let (mut node_exit, mut node_file) = (None, None);
         while let Some(arg) = args.next() {
             match arg.as_str() {
                 "--node-exit" if node_exit.is_none() => {
                     node_exit = Some(args.next().ok_or(())?.parse().map_err(|_| ())?);
                 }
-                "--node-root" if node_root.is_none() => {
-                    node_root = Some(args.next().filter(|dir| !dir.is_empty()).ok_or(())?);
+                "--node-file" if node_file.is_none() => {
+                    node_file = Some(relative_file(&args.next().ok_or(())?).ok_or(())?);
                 }
                 "--limit" => limit = args.next().ok_or(())?.parse().map_err(|_| ())?,
                 "--files" => files = true,
@@ -597,18 +599,18 @@ fn run(mut args: impl Iterator<Item = String>, mode: &str) -> Checked<(Value, i3
                 _ => return Err(()),
             }
         }
-        if exit.is_some() && (node_exit.is_some() || node_root.is_some()) {
+        if exit.is_some() && (node_exit.is_some() || node_file.is_some()) {
             return Err(());
         }
         let raw = bounded(&first)?;
         if exit.is_none() && (node_exit.is_some() || node::detect(&raw)) {
             let outcome = request(limit, files, node_exit, &expect, expected_tests)
-                .and_then(|request| node::compact(&raw, node_root.as_deref(), &request));
+                .and_then(|request| node::compact(&raw, node_file.as_deref(), &request));
             return Ok(outcome.unwrap_or_else(|()| {
                 (json!({"status":"unverified","reason":"missing_invalid_or_incomplete_node_junit"}), 2)
             }));
         }
-        if node_root.is_some() {
+        if node_file.is_some() {
             return Err(());
         }
         compact(&raw, limit, files, exit, &expect, expected_tests)
@@ -621,18 +623,11 @@ fn run_compare(mut args: impl Iterator<Item = String>, summary_only: bool) -> Co
     let first = args.next().ok_or("invalid_arguments")?;
     let second = args.next().ok_or("invalid_arguments")?;
     let (mut ea, mut eb) = (None, None);
-    let mut roots: [Option<String>; 2] = [None, None];
+    let mut node_file = None;
     while let Some(arg) = args.next() {
-        let side = match arg.as_str() {
-            "--before-root" => Some(0),
-            "--after-root" => Some(1),
-            _ => None,
-        };
-        if let Some(side) = side {
+        if arg == "--node-file" && node_file.is_none() {
             let value = args.next().ok_or("invalid_arguments")?;
-            if value.is_empty() || roots[side].replace(value).is_some() {
-                return Err("invalid_arguments");
-            }
+            node_file = Some(relative_file(&value).ok_or("invalid_arguments")?);
             continue;
         }
         let dest = match arg.as_str() {
@@ -655,14 +650,9 @@ fn run_compare(mut args: impl Iterator<Item = String>, summary_only: bool) -> Co
     let before = bounded(&first).map_err(|_| "before_report_unavailable")?;
     let after = bounded(&second).map_err(|_| "after_report_unavailable")?;
     if node::detect(&before) || node::detect(&after) {
-        return node::compare(
-            [&before, &after],
-            [roots[0].as_deref(), roots[1].as_deref()],
-            [ea, eb],
-            summary_only,
-        );
+        return node::compare([&before, &after], node_file.as_deref(), [ea, eb], summary_only);
     }
-    if roots.iter().any(Option::is_some) {
+    if node_file.is_some() {
         return Err("invalid_arguments");
     }
     compare(&before, &after, ea, eb, summary_only)
@@ -851,11 +841,11 @@ fn main() {
                 return;
             }
             "compact" => {
-                println!("Usage: yomumi-evidence compact REPORT [--limit N] [--files]\n       [--bun-exit EXIT --expect-file FILE ... [--expect-tests N]]\n\nCapture Bun's actual exit and repeat --expect-file for every intended test file.\nOptionally require an exact test count from a trusted full run.\n--limit: 1-12 clusters (default 6). --files: include per-file counts.\nScoped exits: 0 scoped pass, 1 scoped failure, 2 unverified or invalid.\nWithout a scope, exit 0 only means a summary was produced.\n\nNode reports: use --node-exit EXIT instead of --bun-exit, and --node-root DIR\n(the project directory) so absolute paths in the report become relative.");
+                println!("Usage: yomumi-evidence compact REPORT [--limit N] [--files]\n       [--bun-exit EXIT --expect-file FILE ... [--expect-tests N]]\n\nCapture Bun's actual exit and repeat --expect-file for every intended test file.\nOptionally require an exact test count from a trusted full run.\n--limit: 1-12 clusters (default 6). --files: include per-file counts.\nScoped exits: 0 scoped pass, 1 scoped failure, 2 unverified or invalid.\nWithout a scope, exit 0 only means a summary was produced.\n\nNode reports: use --node-exit EXIT instead of --bun-exit. Node names no test file in\nits report, so run one file per report and declare it with --node-file FILE. A scoped\nNode verdict also requires --expect-tests.");
                 return;
             }
             "compare" => {
-                println!("Usage: yomumi-evidence compare [--diagnostics] [--summary-only] BEFORE AFTER --before-exit EXIT --after-exit EXIT\n\nCapture actual Bun exits immediately. Use the same test selection in both runs.\nExit 0 means reports are comparable, not that the candidate passed.\nInspect afterFailed, changeCount, and changes. Exit 2 means incomplete or invalid.\nPut optional flags before BEFORE. --diagnostics adds a reason on exit 2.\n--summary-only shows complete category counts without listing individual tests.\n\nNode reports: capture Node's exits and add --before-root DIR --after-root DIR\n(each run's project directory). Both reports must come from the same runner.");
+                println!("Usage: yomumi-evidence compare [--diagnostics] [--summary-only] BEFORE AFTER --before-exit EXIT --after-exit EXIT\n\nCapture actual Bun exits immediately. Use the same test selection in both runs.\nExit 0 means reports are comparable, not that the candidate passed.\nInspect afterFailed, changeCount, and changes. Exit 2 means incomplete or invalid.\nPut optional flags before BEFORE. --diagnostics adds a reason on exit 2.\n--summary-only shows complete category counts without listing individual tests.\n\nNode reports: capture Node's exits, run one test file per report, and declare that\nfile with --node-file FILE. Both reports must come from the same runner.");
                 return;
             }
             _ => {}

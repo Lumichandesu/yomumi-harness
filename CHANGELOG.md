@@ -4,7 +4,7 @@
 
 ### Added
 
-- `compact` and `compare` read JUnit XML from Node's built-in test runner, with `--node-exit`, `--node-root`, `--before-root`, and `--after-root`. Run durations keep their source text and compare at 0.0001 ms without floating point. Bun checks and Bun output are unchanged. See [Node test runner reports](docs/guide/13-node-junit.md).
+- `compact` and `compare` read JUnit XML from Node's built-in test runner, with `--node-exit` and `--node-file`. Node 22 reports name no test file, so scope is the caller's declaration of one file per report, and a scoped verdict also requires `--expect-tests`. Run durations keep their source text and compare at 0.0001 ms without floating point. Bun checks and Bun output are unchanged. See [Node test runner reports](docs/guide/13-node-junit.md).
 
 ### Documentation
 
