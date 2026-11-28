@@ -10,3 +10,4 @@ node_modules/
 !/examples/replay/baseline.xml
 !/examples/replay/different-failure.xml
 !/examples/replay/moved-failure.xml
+!/tests/fixtures/node/*.xml
