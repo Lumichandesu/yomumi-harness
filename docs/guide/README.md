@@ -39,4 +39,6 @@ This guide borrows the documentation pattern of a short front door and task-orie
 
 [Reframe a vague request before writing code](12-reframe.md)
 
+[Node test runner reports and exact durations](13-node-junit.md)
+
 [The wider Yomumi Harness system: multi-agent dispatch, model routing and evidence-first rules](../system/README.md)

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+	<testsuite name="first" time="0.001148" disabled="0" errors="0" tests="1" failures="0" skipped="0" hostname="redacted-host">
+		<testcase name="reports" time="0.000408" classname="test"/>
+	</testsuite>
+	<!-- tests 1 -->
+	<!-- suites 1 -->
+	<!-- pass 1 -->
+	<!-- fail 0 -->
+	<!-- cancelled 0 -->
+	<!-- skipped 0 -->
+	<!-- todo 0 -->
+	<!-- duration_ms 122.2017 -->
+</testsuites>

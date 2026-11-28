@@ -1,4 +1,6 @@
 #![forbid(unsafe_code)]
+mod node;
+
 use roxmltree::{Document, Node};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -38,25 +40,27 @@ fn relative_file(s: &str) -> Option<String> {
         return None;
     }
     let (base, ext) = s.rsplit_once('.')?;
-    if base.rsplit('/').next()?.is_empty()
-        || !matches!(
-            ext,
-            "js" | "ts"
-                | "jsx"
-                | "tsx"
-                | "mjs"
-                | "mts"
-                | "mjsx"
-                | "mtsx"
-                | "cjs"
-                | "cts"
-                | "cjsx"
-                | "ctsx"
-        )
-    {
+    if base.rsplit('/').next()?.is_empty() || !script_extension(ext) {
         return None;
     }
     Some(s.into())
+}
+
+fn script_extension(ext: &str) -> bool {
+    matches!(
+        ext,
+        "js" | "ts"
+            | "jsx"
+            | "tsx"
+            | "mjs"
+            | "mts"
+            | "mjsx"
+            | "mtsx"
+            | "cjs"
+            | "cts"
+            | "cjsx"
+            | "ctsx"
+    )
 }
 
 fn sha(data: impl AsRef<[u8]>) -> String {
@@ -159,7 +163,8 @@ fn validate_suite_counts(root: Node<'_, '_>) -> Checked<()> {
     Ok(())
 }
 
-fn parse(raw: &[u8], delta: bool) -> Checked<Report> {
+/// Decode a report and refuse document types and entities before any XML parsing.
+fn xml_text(raw: &[u8]) -> Checked<&str> {
     let input = std::str::from_utf8(raw)
         .map_err(|_| ())?
         .trim_start_matches('\u{feff}');
@@ -174,7 +179,12 @@ fn parse(raw: &[u8], delta: bool) -> Checked<Report> {
     {
         return Err(());
     }
-    let doc = Document::parse(input).map_err(|_| ())?;
+    Ok(input)
+}
+
+/// Parse a Bun report.
+fn parse(raw: &[u8], delta: bool) -> Checked<Report> {
+    let doc = Document::parse(xml_text(raw)?).map_err(|_| ())?;
     let root = doc.root_element();
     if tag(root) != Some("testsuites") || attr(root, "name") != "bun test" {
         return Err(());
@@ -318,14 +328,35 @@ fn parse(raw: &[u8], delta: bool) -> Checked<Report> {
     Ok(r)
 }
 
-fn compact(
-    raw: &[u8],
+/// What differs between runners in a summary.
+struct Runner {
+    kind: &'static str,
+    exit_key: &'static str,
+    exit_problem: &'static str,
+}
+
+const BUN: Runner = Runner {
+    kind: "yomumi.bun-test-summary",
+    exit_key: "bunExit",
+    exit_problem: "bun_exit_disagrees",
+};
+
+/// Validated compact options.
+struct Request {
+    limit: usize,
+    show_files: bool,
+    exit: Option<i32>,
+    scope: BTreeSet<String>,
+    expected_tests: Option<usize>,
+}
+
+fn request(
     limit: usize,
     show_files: bool,
     exit: Option<i32>,
     expected: &[String],
     expected_tests: Option<usize>,
-) -> Checked<(Value, i32)> {
+) -> Checked<Request> {
     if !(1..=12).contains(&limit) || exit.is_some() == expected.is_empty() || expected.len() > 256 {
         return Err(());
     }
@@ -339,15 +370,49 @@ fn compact(
     if scope.len() != expected.len() {
         return Err(());
     }
-    let r = parse(raw, false)?;
-    let c = r.counts;
+    Ok(Request {
+        limit,
+        show_files,
+        exit,
+        scope,
+        expected_tests,
+    })
+}
+
+fn compact(
+    raw: &[u8],
+    limit: usize,
+    show_files: bool,
+    exit: Option<i32>,
+    expected: &[String],
+    expected_tests: Option<usize>,
+) -> Checked<(Value, i32)> {
+    let request = request(limit, show_files, exit, expected, expected_tests)?;
+    Ok(summarize(&parse(raw, false)?, &BUN, &request, Vec::new()))
+}
+
+/// `problems` holds runner-specific blockers already found while parsing.
+fn summarize(
+    r: &Report,
+    runner: &Runner,
+    request: &Request,
+    mut problems: Vec<&'static str>,
+) -> (Value, i32) {
+    let Request {
+        limit,
+        show_files,
+        exit,
+        ref scope,
+        expected_tests,
+    } = *request;
+    let c = &r.counts;
     let mut groups: Vec<_> = r.groups.iter().collect();
     groups.sort_unstable_by(|(a, x), (b, y)| y.count.cmp(&x.count).then_with(|| a.cmp(b)));
     let clusters:Vec<_> = groups.iter().take(limit).map(|(id,g)| json!({
         "id":id,"kind":g.kind,"count":g.count,"unknownFile":g.unknown,
         "files":g.files.iter().take(2).collect::<Vec<_>>(),"otherFiles":g.files.len().saturating_sub(2)
     })).collect();
-    let mut result = json!({"schemaVersion":1,"kind":"yomumi.bun-test-summary","tests":c.tests,"failures":c.failures,
+    let mut result = json!({"schemaVersion":1,"kind":runner.kind,"tests":c.tests,"failures":c.failures,
         "errors":c.errors,"skipped":c.skipped,"clusterCount":groups.len(),"clusters":clusters,
         "omittedClusters":groups.len().saturating_sub(limit),"omittedFailedTests":groups.iter().skip(limit).map(|(_,g)|g.count).sum::<usize>()});
     if show_files {
@@ -364,7 +429,6 @@ fn compact(
     if let Some(exit) = exit {
         let missing: Vec<_> = scope.iter().filter(|f| !r.files.contains_key(*f)).collect();
         let extra: Vec<_> = r.files.keys().filter(|f| !scope.contains(*f)).collect();
-        let mut problems = Vec::new();
         if !missing.is_empty() || !extra.is_empty() || r.unknown > 0 {
             problems.push("file_coverage_mismatch");
         }
@@ -379,7 +443,7 @@ fn compact(
         }
         let failed = c.failures + c.errors > 0;
         if exit != i32::from(failed) {
-            problems.push("bun_exit_disagrees");
+            problems.push(runner.exit_problem);
         }
         let verdict = if !problems.is_empty() {
             code = 2;
@@ -391,13 +455,13 @@ fn compact(
             "scoped-pass"
         };
         result["verdict"] = json!(verdict);
-        result["bunExit"] = json!(exit);
+        result[runner.exit_key] = json!(exit);
         result["problems"] = json!(problems);
         result["coverage"] = json!({"expectedCount":scope.len(),"observedCount":r.files.len(),
             "missingFiles":missing.iter().take(8).collect::<Vec<_>>(),"unexpectedFiles":extra.iter().take(8).collect::<Vec<_>>(),
             "omittedMissingFiles":missing.len().saturating_sub(8),"omittedUnexpectedFiles":extra.len().saturating_sub(8),"unknownFileCases":r.unknown});
     }
-    Ok((result, code))
+    (result, code)
 }
 
 type Compared<T> = Result<T, &'static str>;
@@ -434,6 +498,18 @@ fn compare(a: &[u8], b: &[u8], ea: i32, eb: i32, summary_only: bool) -> Compared
             "after_bun_exit_disagrees",
         ],
     )?;
+    Ok((delta(&a_report, &b_report, [a, b], summary_only)?, 0))
+}
+
+/// Match test identities and classify changes. Callers gate each report first.
+fn delta(
+    a_report: &Report,
+    b_report: &Report,
+    raw: [&[u8]; 2],
+    summary_only: bool,
+) -> Compared<Value> {
+    let af = a_report.counts.errors + a_report.counts.failures;
+    let bf = b_report.counts.errors + b_report.counts.failures;
     if !a_report.cases.keys().eq(b_report.cases.keys()) {
         return Err("test_identity_mismatch");
     }
@@ -482,14 +558,14 @@ fn compare(a: &[u8], b: &[u8], ea: i32, eb: i32, summary_only: bool) -> Compared
     }
     let num = totals.iter().sum::<usize>();
     let mut output = json!({"schemaVersion":1,"kind":"yomumi.matched-test-delta","verdict":"matched","tests":b_report.counts.tests,
-        "files":b_report.files.len(),"beforeFailed":af,"afterFailed":bf,"changeCount":num,"beforeSha256":sha(a),"afterSha256":sha(b)});
+        "files":b_report.files.len(),"beforeFailed":af,"afterFailed":bf,"changeCount":num,"beforeSha256":sha(raw[0]),"afterSha256":sha(raw[1])});
     if summary_only {
         output["changeCounts"] = json!({"fixed":totals[0],"regression":totals[1],"changed_failure":totals[2]});
         output["omittedChanges"] = json!(num);
     } else {
         output["changes"] = json!(changes);
     }
-    Ok((output, 0))
+    Ok(output)
 }
 
 fn run(mut args: impl Iterator<Item = String>, mode: &str) -> Checked<(Value, i32)> {
@@ -497,8 +573,15 @@ fn run(mut args: impl Iterator<Item = String>, mode: &str) -> Checked<(Value, i3
     if mode == "compact" {
         let (mut limit, mut files, mut exit, mut expect) = (6, false, None, Vec::new());
         let mut expected_tests = None;
+        let (mut node_exit, mut node_file) = (None, None);
         while let Some(arg) = args.next() {
             match arg.as_str() {
+                "--node-exit" if node_exit.is_none() => {
+                    node_exit = Some(args.next().ok_or(())?.parse().map_err(|_| ())?);
+                }
+                "--node-file" if node_file.is_none() => {
+                    node_file = Some(relative_file(&args.next().ok_or(())?).ok_or(())?);
+                }
                 "--limit" => limit = args.next().ok_or(())?.parse().map_err(|_| ())?,
                 "--files" => files = true,
                 "--bun-exit" if exit.is_none() => {
@@ -516,7 +599,21 @@ fn run(mut args: impl Iterator<Item = String>, mode: &str) -> Checked<(Value, i3
                 _ => return Err(()),
             }
         }
-        compact(&bounded(&first)?, limit, files, exit, &expect, expected_tests)
+        if exit.is_some() && (node_exit.is_some() || node_file.is_some()) {
+            return Err(());
+        }
+        let raw = bounded(&first)?;
+        if exit.is_none() && (node_exit.is_some() || node::detect(&raw)) {
+            let outcome = request(limit, files, node_exit, &expect, expected_tests)
+                .and_then(|request| node::compact(&raw, node_file.as_deref(), &request));
+            return Ok(outcome.unwrap_or_else(|()| {
+                (json!({"status":"unverified","reason":"missing_invalid_or_incomplete_node_junit"}), 2)
+            }));
+        }
+        if node_file.is_some() {
+            return Err(());
+        }
+        compact(&raw, limit, files, exit, &expect, expected_tests)
     } else {
         Err(())
     }
@@ -526,7 +623,13 @@ fn run_compare(mut args: impl Iterator<Item = String>, summary_only: bool) -> Co
     let first = args.next().ok_or("invalid_arguments")?;
     let second = args.next().ok_or("invalid_arguments")?;
     let (mut ea, mut eb) = (None, None);
+    let mut node_file = None;
     while let Some(arg) = args.next() {
+        if arg == "--node-file" && node_file.is_none() {
+            let value = args.next().ok_or("invalid_arguments")?;
+            node_file = Some(relative_file(&value).ok_or("invalid_arguments")?);
+            continue;
+        }
         let dest = match arg.as_str() {
             "--before-exit" => &mut ea,
             "--after-exit" => &mut eb,
@@ -544,13 +647,15 @@ fn run_compare(mut args: impl Iterator<Item = String>, summary_only: bool) -> Co
     }
     let ea = ea.ok_or("invalid_arguments")?;
     let eb = eb.ok_or("invalid_arguments")?;
-    compare(
-        &bounded(&first).map_err(|_| "before_report_unavailable")?,
-        &bounded(&second).map_err(|_| "after_report_unavailable")?,
-        ea,
-        eb,
-        summary_only,
-    )
+    let before = bounded(&first).map_err(|_| "before_report_unavailable")?;
+    let after = bounded(&second).map_err(|_| "after_report_unavailable")?;
+    if node::detect(&before) || node::detect(&after) {
+        return node::compare([&before, &after], node_file.as_deref(), [ea, eb], summary_only);
+    }
+    if node_file.is_some() {
+        return Err("invalid_arguments");
+    }
+    compare(&before, &after, ea, eb, summary_only)
 }
 
 struct ScopedReport(std::path::PathBuf);
@@ -726,7 +831,7 @@ fn main() {
     let mode = args.next().unwrap_or_default();
     let help_flag = |s: &str| matches!(s, "-h" | "--help");
     if help_flag(&mode) && args.len() == 0 {
-        println!("yomumi-evidence: verify Bun JUnit test evidence\n\nCommands:\n  compact  Summarize one report and optionally verify its file scope.\n  compare  Find fixes, regressions, and changed failures across matched runs.\n  run-scoped  Run Bun and verify the intended files and test count.\n\nUse a command with --help for usage.\nCompare exit 0 means reports are comparable; it does not certify a pass.");
+        println!("yomumi-evidence: verify Bun and Node JUnit test evidence\n\nCommands:\n  compact  Summarize one report and optionally verify its file scope.\n  compare  Find fixes, regressions, and changed failures across matched runs.\n  run-scoped  Run Bun and verify the intended files and test count.\n\nUse a command with --help for usage.\nCompare exit 0 means reports are comparable; it does not certify a pass.");
         return;
     }
     if args.len() == 1 && help_flag(&args.as_slice()[0]) {
@@ -736,11 +841,11 @@ fn main() {
                 return;
             }
             "compact" => {
-                println!("Usage: yomumi-evidence compact REPORT [--limit N] [--files]\n       [--bun-exit EXIT --expect-file FILE ... [--expect-tests N]]\n\nCapture Bun's actual exit and repeat --expect-file for every intended test file.\nOptionally require an exact test count from a trusted full run.\n--limit: 1-12 clusters (default 6). --files: include per-file counts.\nScoped exits: 0 scoped pass, 1 scoped failure, 2 unverified or invalid.\nWithout a scope, exit 0 only means a summary was produced.");
+                println!("Usage: yomumi-evidence compact REPORT [--limit N] [--files]\n       [--bun-exit EXIT --expect-file FILE ... [--expect-tests N]]\n\nCapture Bun's actual exit and repeat --expect-file for every intended test file.\nOptionally require an exact test count from a trusted full run.\n--limit: 1-12 clusters (default 6). --files: include per-file counts.\nScoped exits: 0 scoped pass, 1 scoped failure, 2 unverified or invalid.\nWithout a scope, exit 0 only means a summary was produced.\n\nNode reports: use --node-exit EXIT instead of --bun-exit. Node names no test file in\nits report, so run one file per report and declare it with --node-file FILE. A scoped\nNode verdict also requires --expect-tests.");
                 return;
             }
             "compare" => {
-                println!("Usage: yomumi-evidence compare [--diagnostics] [--summary-only] BEFORE AFTER --before-exit EXIT --after-exit EXIT\n\nCapture actual Bun exits immediately. Use the same test selection in both runs.\nExit 0 means reports are comparable, not that the candidate passed.\nInspect afterFailed, changeCount, and changes. Exit 2 means incomplete or invalid.\nPut optional flags before BEFORE. --diagnostics adds a reason on exit 2.\n--summary-only shows complete category counts without listing individual tests.");
+                println!("Usage: yomumi-evidence compare [--diagnostics] [--summary-only] BEFORE AFTER --before-exit EXIT --after-exit EXIT\n\nCapture actual Bun exits immediately. Use the same test selection in both runs.\nExit 0 means reports are comparable, not that the candidate passed.\nInspect afterFailed, changeCount, and changes. Exit 2 means incomplete or invalid.\nPut optional flags before BEFORE. --diagnostics adds a reason on exit 2.\n--summary-only shows complete category counts without listing individual tests.\n\nNode reports: capture Node's exits, run one test file per report, and declare that\nfile with --node-file FILE. Both reports must come from the same runner.");
                 return;
             }
             _ => {}

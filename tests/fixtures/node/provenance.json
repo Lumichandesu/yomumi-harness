@@ -1,0 +1,64 @@
+{
+  "node": "v22.23.5",
+  "platform": "win32",
+  "method": "tests/fixtures/node/generate.mjs",
+  "runs": [
+    {
+      "name": "clean",
+      "files": [
+        "pair"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "broken",
+      "files": [
+        "broken"
+      ],
+      "exit": 1
+    },
+    {
+      "name": "gone",
+      "files": [
+        "gone"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "mixed",
+      "files": [
+        "mixed"
+      ],
+      "exit": 1
+    },
+    {
+      "name": "crash",
+      "files": [
+        "pair",
+        "crash"
+      ],
+      "exit": 1
+    },
+    {
+      "name": "exit",
+      "files": [
+        "exit"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "late-exit",
+      "files": [
+        "late-exit"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "empty",
+      "files": [
+        "empty"
+      ],
+      "exit": 0
+    }
+  ]
+}
